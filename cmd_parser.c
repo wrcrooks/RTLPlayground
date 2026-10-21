@@ -699,8 +699,9 @@ void parse_vlan(void)
 				dhcp_start();
 			if (!vlan_settings.vlan)
 				print_string("Management VLAN disabled\n");
-			else
+			else {
 				print_string("Management VLAN set to "); print_short(management_vlan); write_char('\n');
+			}
 			return;
 		}
 
