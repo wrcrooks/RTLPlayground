@@ -89,6 +89,11 @@ __xdata uint32_t last_session_use;
 #define TSTATE_POSTBODY		6
 #define TSTATE_HEADER		7
 
+/* fw_reset_pending: 1 resets once a verified upload's verdict is ACKed. A
+ * reboot request resets once its reply is ACKed too, but also when the client
+ * drops before ACKing: it asked for the reboot, the reply is a courtesy. */
+#define RESET_REQUESTED		2
+
 extern __xdata uint16_t crc_value;
 __xdata uint16_t crc_final;
 void crc16_bank1(__xdata uint8_t *v) __naked;
@@ -287,7 +292,7 @@ void send_length_required(void)
 
 void send_ok(void)
 {
-	slen = strtox(outbuf, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
+	slen = strtox(outbuf, "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
 }
 
 
@@ -903,6 +908,24 @@ static void tx_send(uint16_t len)
 }
 
 
+/* Kept out of httpd_appcall(): even small additions there make SDCC spill and
+ * grow the whole function by hundreds of bytes, and BANK1 is nearly full. */
+static void reset_reply(void)
+{
+	/* Nothing reaches the wire until the appcall returns, so resetting from
+	 * it would leave the request hanging. Reply, and reset on the ACK. */
+	send_ok();
+	uip_conn->appstate.fw_reset_pending = RESET_REQUESTED;
+}
+
+
+static void reset_if_requested(void)
+{
+	if (uip_conn->appstate.fw_reset_pending == RESET_REQUESTED)
+		reset_chip();
+}
+
+
 void httpd_appcall(void)
 {
 	__xdata struct httpd_state * __xdata s = &(uip_conn->appstate);
@@ -921,10 +944,12 @@ void httpd_appcall(void)
 	} else if (uip_closed()) {
 		dbg_string("Connection closed\n");
 		s->tstate = TSTATE_CLOSED;
+		reset_if_requested();
 	} else if (uip_aborted() || uip_timedout()) {
 		dbg_string("Connection aborted\n");
 		uip_close();
 		s->tstate = TSTATE_CLOSED;
+		reset_if_requested();
 	} else if (uip_poll()) {
 		uip_len = 0;
 		if (s->tstate == TSTATE_ACKED) {
@@ -970,9 +995,9 @@ void httpd_appcall(void)
 			cont_addr += slen;
 			s->tstate = TSTATE_TX;
 		} else if (s->fw_reset_pending) {
-			// The upload verdict has been fully ACKed by the client;
-			// now it is safe to reset and apply the staged image
-			print_string("Resetting to apply update\n");
+			// The upload verdict or the reboot reply has been fully
+			// ACKed by the client; a staged image is applied at boot
+			print_string("Resetting\n");
 			reset_chip();
 		}
 	} else if (uip_newdata() && s->tstate == TSTATE_POST) {
@@ -1101,9 +1126,7 @@ void httpd_appcall(void)
 				clear_command_history();
 				send_mtu(); // dummy response
 			} else if (is_word(q, "/reset")) {
-				uip_close();
-				delay(1000); //wait for the close packet to be sent, otherwise the browser will retry
-				reset_chip();
+				reset_reply();
 			} else {
 				send_not_found();
 			}
