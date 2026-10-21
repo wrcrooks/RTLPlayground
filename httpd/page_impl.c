@@ -323,13 +323,18 @@ void send_basic_info(void)
 }
 
 
-void send_vlan(uint16_t vlan)
+/* Send a VLAN entry
+ * Returns an error for an ID outside the table: vlan_get() then leaves
+ * sfr_data holding whatever the last table read put there.
+ */
+bool send_vlan(uint16_t vlan)
 {
+	if (vlan_get(vlan) < 0)
+		return true;
 	slen = strtox(outbuf, HTTP_RESPONCE_JSON);
 	dbg_string("sending VLAN\n");
 	//{"members":"0x00060011"}
 	slen += strtox(outbuf + slen, "{\"members\":\"0x");
-	vlan_get(vlan);
 	sfr_data_to_html();
 	slen += strtox(outbuf + slen, "\",\"name\":\"");
 	__xdata uint16_t n = vlan_name(vlan);
@@ -348,6 +353,7 @@ void send_vlan(uint16_t vlan)
 	byte_to_html(pvid_mask >> 8);
 	byte_to_html(pvid_mask);
 	slen += strtox(outbuf + slen, "\"}");
+	return false;
 }
 
 /* Send counters
