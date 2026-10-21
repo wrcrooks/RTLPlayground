@@ -538,8 +538,19 @@ uint8_t stream_upload(void)
 				write_len += bindex;
 				bindex = 0;
 			}
-			crc16_bank1(upload_settings.p + upload_settings.bptr);
-			flash_buf[write_len++] = upload_settings.p[upload_settings.bptr++];
+			/* A broken partial match may be followed directly by the real
+			 * boundary, as when the payload's last byte is '\r'. The
+			 * delimiter holds '\r' only at its start, so the byte that broke
+			 * the match is the only place a new one can begin. */
+			if (upload_settings.p[upload_settings.bptr] == boundary[0]) {
+				crc_final = crc_value;
+				crc16_bank1(upload_settings.p + upload_settings.bptr);
+				upload_settings.bptr++;
+				bindex = 1;
+			} else {
+				crc16_bank1(upload_settings.p + upload_settings.bptr);
+				flash_buf[write_len++] = upload_settings.p[upload_settings.bptr++];
+			}
 			if (write_len >= FLASH_PAGE_SIZE) {
 				/* The staged image spans FIRMWARE_UPLOAD_START to twice that,
 				 * the span check_and_flash_update_image() reads back. Nothing
@@ -571,7 +582,6 @@ uint8_t stream_upload(void)
 					memcpy(flash_buf, flash_buf + FLASH_PAGE_SIZE, write_len);
 				}
 			}
-			bindex = 0;
 		}
 	} while(1);
 }

@@ -83,6 +83,10 @@ static uint16_t written_config_len;
 static uint32_t config_erase_addr, config_write_addr;
 static int config_erases, config_writes;
 
+/* Firmware upload staging area, as far as a test image reaches into it */
+#define STAGED_MAX	4096
+static uint8_t staged[STAGED_MAX];
+
 const char * const mime_strings[] = { "text/html", "image/svg+xml", "image/x-icon",
 			 "image/png", "text/javascript", "text/css", "text/plain" };
 
@@ -112,9 +116,21 @@ void flash_write_bytes(uint8_t *ptr)
 	written_config_len = flash_region.len;
 	if (written_config_len <= sizeof(written_config))
 		memcpy(written_config, ptr, written_config_len);
+	if (flash_region.addr >= FIRMWARE_UPLOAD_START
+	    && flash_region.addr + flash_region.len <= FIRMWARE_UPLOAD_START + STAGED_MAX)
+		memcpy(staged + (flash_region.addr - FIRMWARE_UPLOAD_START), ptr, flash_region.len);
 }
 const char *get_flash_size_str(void) { return "512 kB"; }
-void crc16_bank1(uint8_t *v) { (void)v; }
+
+/* The same CRC-16 as crc16.asm and tools/crc_calculator.c */
+static uint16_t crc16_update(uint16_t crc, uint8_t a)
+{
+	crc ^= a;
+	for (int i = 0; i < 8; i++)
+		crc = crc & 1 ? (crc >> 1) ^ 0xA001 : crc >> 1;
+	return crc;
+}
+void crc16_bank1(uint8_t *v) { crc_value = crc16_update(crc_value, *v); }
 static unsigned reset_calls;
 void reset_chip(void) { reset_calls++; }
 void delay(uint16_t t) { (void)t; }
@@ -535,7 +551,7 @@ static void scenario_bad_l4_checksum(void)
 
 
 /* Private HTTP lifecycle values; drive the real callback, not a model. */
-enum { TSTATE_NONE = 0, TSTATE_TX = 1 };
+enum { TSTATE_NONE = 0, TSTATE_TX = 1, TSTATE_POST = 4 };
 extern uint16_t slen, cont_len, sent_len, bindex, crc_final, write_len;
 extern uint8_t boundary[], verify_crc, outbuf[];
 extern struct { uint8_t *p; uint16_t bptr, plen; } upload_settings;
@@ -646,6 +662,88 @@ static void scenario_upload_reset_owner(void)
 	httpd_appcall();
 	CHECK(reset_calls == 0, "failed CRC verdict ACK does not reset");
 
+}
+
+
+extern uint32_t uptr;
+
+/* Streams payload plus the closing delimiter through stream_upload() in two
+ * receive events split at the given body offset. Returns 1 when the part ends
+ * where the payload ends, with exactly the payload staged and its CRC kept. */
+static int upload_image(const uint8_t *payload, int len, int split)
+{
+	static const char tail[] = "\r\n--XYZ--\r\n";
+	static uint8_t body[STAGED_MAX + sizeof(tail)];
+	int blen = len + (int)sizeof(tail) - 1;
+	uint16_t crc = 0;
+
+	memcpy(body, payload, len);
+	memcpy(body + len, tail, sizeof(tail) - 1);
+	memset(staged, 0xee, sizeof(staged));
+	strcpy((char *)boundary, "\r\n--XYZ");
+	uip_conn = &uip_conns[0];
+	uip_conn->appstate.tstate = TSTATE_POST;
+	uip_conn->appstate.fw_reset_pending = 0;
+	bindex = 0;
+	write_len = 0;
+	crc_value = 0;
+	verify_crc = 0;
+	uptr = FIRMWARE_UPLOAD_START;
+
+	upload_settings.p = body;
+	upload_settings.bptr = 0;
+	upload_settings.plen = split;
+	stream_upload();
+	if (uip_conn->appstate.tstate == TSTATE_POST) {
+		upload_settings.p = body + split;
+		upload_settings.bptr = 0;
+		upload_settings.plen = blen - split;
+		stream_upload();
+	}
+	for (int i = 0; i < len; i++)
+		crc = crc16_update(crc, payload[i]);
+	return uip_conn->appstate.tstate == TSTATE_NONE
+	       && uptr == FIRMWARE_UPLOAD_START + (uint32_t)len
+	       && !memcmp(staged, payload, len)
+	       && crc_final == crc;
+}
+
+static void scenario_upload_boundary(void)
+{
+	static uint8_t img[STAGED_MAX - 1];
+	int len = 600, bad_last = -1, bad_split = -1;
+
+	/* Every value of the last byte, the boundary arriving whole or split
+	 * anywhere across two receive events. A last byte of '\r' begins a
+	 * partial match that the real delimiter's own '\r' breaks. */
+	for (int i = 0; i < len; i++)
+		img[i] = pattern(i);
+	for (int last = 0; last < 256 && bad_last < 0; last++) {
+		img[len - 1] = last;
+		if (!upload_image(img, len, len + 11))
+			bad_last = last;
+	}
+	img[len - 1] = '\r';
+	for (int split = len - 2; split <= len + 11 && bad_split < 0; split++)
+		if (!upload_image(img, len, split))
+			bad_split = split;
+	if (bad_last >= 0)
+		printf("      upload: last byte 0x%02x loses the closing boundary\n", bad_last);
+	if (bad_split >= 0)
+		printf("      upload: payload ending in CR fails when split at %d\n", bad_split);
+	CHECK(bad_last < 0, "upload: the part ends after the payload whatever its last byte");
+	CHECK(bad_split < 0, "upload: a payload ending in CR ends wherever the segment splits");
+
+	/* Partial matches broken by a byte that starts a new match, back to
+	 * back: each one appends to the page buffer without writing a byte. */
+	memset(img, '\r', sizeof(img));
+	CHECK(upload_image(img, sizeof(img), 1000),
+	      "upload: a run of CR bytes is staged intact without overrunning the page buffer");
+	for (int i = 0; i + 2 < (int)sizeof(img); i += 3) {
+		img[i] = '\r'; img[i + 1] = '\n'; img[i + 2] = '-';
+	}
+	CHECK(upload_image(img, sizeof(img), 2000),
+	      "upload: repeated partial delimiters are staged as payload");
 }
 
 static void scenario_fragmented_post_header(void)
@@ -1024,6 +1122,7 @@ int main(int argc, char **argv)
 	scenario_rexmit_after_shrink();
 	scenario_bad_l4_checksum();
 	scenario_upload_reset_owner();
+	scenario_upload_boundary();
 	scenario_fragmented_post_header();
 	scenario_split_content_type();
 	scenario_split_header_terminator();
