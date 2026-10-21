@@ -648,6 +648,51 @@ static void scenario_upload_reset_owner(void)
 
 }
 
+static void scenario_reset_reply(void)
+{
+	static const char get[] =
+		"GET /reset HTTP/1.1\r\n"
+		"Host: sw\r\n"
+		"Cookie: session=0123456789ab\r\n"
+		"\r\n";
+	static const char get_anon[] =
+		"GET /reset HTTP/1.1\r\n"
+		"Host: sw\r\n"
+		"\r\n";
+
+	session_start(MSS_FULL);
+	strcpy(session_id, "0123456789ab");
+	reset_calls = 0;
+	client_send(TCP_ACK | TCP_PSH, get, (int)strlen(get));
+	CHECK(reset_calls == 0 && stream_contains("HTTP/1.1 200 OK\r\n")
+	      && stream_contains("Content-Length: 0\r\n\r\n"),
+	      "reset: the reply goes out before the chip resets");
+	client_ack(MSS_FULL);
+	CHECK(reset_calls == 1, "reset: the chip resets once the reply is ACKed");
+
+	/* The client asked for the reboot, so it happens without the ACK too */
+	for (unsigned i = 0; i < 2; i++) {
+		session_start(MSS_FULL);
+		strcpy(session_id, "0123456789ab");
+		reset_calls = 0;
+		client_send(TCP_ACK | TCP_PSH, get, (int)strlen(get));
+		uip_conn = &uip_conns[0];
+		uip_flags = i ? UIP_TIMEDOUT : UIP_ABORT;
+		httpd_appcall();
+		CHECK(reset_calls == 1,
+		      i ? "reset: a timed-out reply still resets"
+			: "reset: a client that drops before ACKing still gets its reset");
+	}
+
+	session_start(MSS_FULL);
+	strcpy(session_id, "0123456789ab");
+	reset_calls = 0;
+	client_send(TCP_ACK | TCP_PSH, get_anon, (int)strlen(get_anon));
+	client_ack(MSS_FULL);
+	CHECK(reset_calls == 0 && stream_contains("HTTP/1.1 401 Unauthorized\r\n"),
+	      "reset: without a session it is refused and nothing resets");
+}
+
 static void scenario_fragmented_post_header(void)
 {
 	static const char first[] =
@@ -1024,6 +1069,7 @@ int main(int argc, char **argv)
 	scenario_rexmit_after_shrink();
 	scenario_bad_l4_checksum();
 	scenario_upload_reset_owner();
+	scenario_reset_reply();
 	scenario_fragmented_post_header();
 	scenario_split_content_type();
 	scenario_split_header_terminator();
