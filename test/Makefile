@@ -28,6 +28,8 @@ TESTS = $(BUILDDIR)/test_cmd_editor \
         $(BUILDDIR)/test_port_tables \
         $(BUILDDIR)/test_page_json \
         $(BUILDDIR)/test_httpd_tx \
+        $(BUILDDIR)/test_httpd_tx_compact \
+        ./test_fileadder.py \
         $(BUILDDIR)/test_tick_gate \
         $(BUILDDIR)/test_nic_rx \
         $(BUILDDIR)/test_lacp
@@ -64,6 +66,10 @@ $(BUILDDIR)/test_page_json: test_page_json.c $(TABLE_ENV) hw_mock.h | $(BUILDDIR
 # rtl837x_lacp.c is compiled UNMODIFIED from the firmware tree.
 $(BUILDDIR)/test_lacp: test_lacp.c $(SRCROOT)/rtl837x_lacp.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+# The same bench with the compact flash layout's addresses
+$(BUILDDIR)/test_httpd_tx_compact: test_httpd_tx.c $(SRCROOT)/httpd/httpd.c $(SRCROOT)/uip/uip.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -DLAYOUT_COMPACT $(filter %.c,$^) -o $@ $(LDFLAGS)
 
 # httpd/httpd.c and uip/uip.c are compiled UNMODIFIED from the firmware tree;
 # this test carries the environment below them itself.
