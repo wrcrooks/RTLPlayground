@@ -8,6 +8,10 @@
 #include "uip.h"
 #include "html_data.h"
 
+#if FDATA_END > DEFAULT_CONFIG_START
+#error "the web UI runs into the default config: move HTML_LOCATION or the layout"
+#endif
+
 // #define DEBUG
 #include "debug.h"
 
@@ -493,17 +497,22 @@ uint8_t stream_upload(void)
 		if (!boundary[bindex]) {
 			s->tstate = TSTATE_NONE;
 			dbg_string("len 2: "); dbg_short(write_len); dbg_char(' ');
-			flash_region.addr = uptr;
-			flash_region.len = write_len;
-			flash_write_bytes(flash_buf);
+			// Past the staging area nothing is written, see below
+			if (uptr < FIRMWARE_UPLOAD_END) {
+				flash_region.addr = uptr;
+				flash_region.len = write_len;
+				flash_write_bytes(flash_buf);
+			}
 			uptr += write_len;
 			write_len = 0;
 			if (verify_crc) {
 				dbg_string("CRC16: "); dbg_short(crc_final); dbg_char('\n');
 				// Both bodies are 33 bytes; Content-Length lets the
 				// browser complete the response without waiting for
-				// the connection close (which a reset would swallow)
-				if (crc_final == 0xb001) {
+				// the connection close (which a reset would swallow).
+				// A valid image built for the other flash layout has
+				// the wrong length, and booting would refuse it.
+				if (crc_final == 0xb001 && uptr == FIRMWARE_UPLOAD_END) {
 					print_string("Checksum OK.\nUpload to flash done, will reset!\n");
 					slen = strtox(outbuf, "HTTP/1.1 200 OK\r\nContent-Length: 33\r\n"
 						"Content-Type: text/plain\r\n\r\n"
@@ -511,17 +520,19 @@ uint8_t stream_upload(void)
 					// Reset once the response is fully ACKed
 					s->fw_reset_pending = 1;
 				} else {
-					print_string("Checksum incorrect! Aborting.\n");
+					print_string("Checksum or image size wrong! Aborting.\n");
 					slen = strtox(outbuf, "HTTP/1.1 400 Bad Request\r\nContent-Length: 33\r\n"
 						"Content-Type: text/plain\r\n\r\n"
-						"NO: checksum failed, not applied\n");
+						"NO: bad image size/CRC, not used\n");
 				}
 			}
 			// Make sure there is a 0 at the end of the uploaded data
-			flash_buf[0] = 0;
-			flash_region.addr = uptr;
-			flash_region.len = 1;
-			flash_write_bytes(flash_buf);
+			if (uptr <= FIRMWARE_UPLOAD_END) {
+				flash_buf[0] = 0;
+				flash_region.addr = uptr;
+				flash_region.len = 1;
+				flash_write_bytes(flash_buf);
+			}
 			if (upload_settings.bptr >= upload_settings.plen)
 				return 0;
 			return 1;
@@ -541,28 +552,26 @@ uint8_t stream_upload(void)
 			crc16_bank1(upload_settings.p + upload_settings.bptr);
 			flash_buf[write_len++] = upload_settings.p[upload_settings.bptr++];
 			if (write_len >= FLASH_PAGE_SIZE) {
-				/* The staged image spans FIRMWARE_UPLOAD_START to twice that,
-				 * the span check_and_flash_update_image() reads back. Nothing
-				 * else bounds uptr: a body whose closing boundary never arrives
-				 * keeps writing, and on a flash exactly this size the address
-				 * wraps onto the running image at zero. */
-				if (uptr >= (uint32_t)FIRMWARE_UPLOAD_START * 2) {
-					print_string("Upload runs past the image area! Aborting.\n");
-					slen = strtox(outbuf, "HTTP/1.1 400 Bad Request\r\nContent-Length: 30\r\n"
-						"Content-Type: text/plain\r\n\r\n"
-						"NO: upload exceeds image area\n");
-					s->tstate = TSTATE_NONE;
-					return 0;
-				}
-				dbg_string("len: "); dbg_short(write_len); dbg_char(' ');
-				dbg_string("CRC16: "); dbg_short(crc_value); dbg_char('\n');
-				if (uptr % FLASH_SECTOR_SIZE == 0) {
+				/* The staged image spans FIRMWARE_UPLOAD_START to
+				 * FIRMWARE_UPLOAD_END, the span check_and_flash_update_image()
+				 * reads back. Past it would lie the saved config of the
+				 * compact layout or, on a flash exactly this size, the running
+				 * image at zero, so nothing is written there. An image too
+				 * long for the area is still read to its end, uptr counting
+				 * on, and refused by the length check once it is complete:
+				 * a client reads the verdict only after sending its whole
+				 * body, and stopping early would leave it with none. */
+				if (uptr < FIRMWARE_UPLOAD_END) {
+					dbg_string("len: "); dbg_short(write_len); dbg_char(' ');
+					dbg_string("CRC16: "); dbg_short(crc_value); dbg_char('\n');
+					if (uptr % FLASH_SECTOR_SIZE == 0) {
+						flash_region.addr = uptr;
+						flash_sector_erase();
+					}
 					flash_region.addr = uptr;
-					flash_sector_erase();
+					flash_region.len = FLASH_PAGE_SIZE;
+					flash_write_bytes(flash_buf);
 				}
-				flash_region.addr = uptr;
-				flash_region.len = FLASH_PAGE_SIZE;
-				flash_write_bytes(flash_buf);
 				uptr += FLASH_PAGE_SIZE;
 				write_len -= FLASH_PAGE_SIZE;
 
@@ -819,7 +828,7 @@ void handle_post(uint16_t body_off)
 				send_unauthorized();
 				return;
 			}
-			if (flash_size < FIRMWARE_UPLOAD_START*2)
+			if (flash_size < FLASH_NEEDED_FOR_UPDATE)
 			{
 				print_string("Flash too small for firmware upload!\n");
 				send_bad_request();

@@ -105,8 +105,13 @@ void flash_sector_erase(void)
 	config_erase_addr = flash_region.addr;
 }
 
+/* End of the highest flash write since the last reset of it */
+static uint32_t max_write_end;
+
 void flash_write_bytes(uint8_t *ptr)
 {
+	if (flash_region.addr + flash_region.len > max_write_end)
+		max_write_end = flash_region.addr + flash_region.len;
 	config_writes++;
 	config_write_addr = flash_region.addr;
 	written_config_len = flash_region.len;
@@ -114,7 +119,16 @@ void flash_write_bytes(uint8_t *ptr)
 		memcpy(written_config, ptr, written_config_len);
 }
 const char *get_flash_size_str(void) { return "512 kB"; }
-void crc16_bank1(uint8_t *v) { (void)v; }
+
+/* The same CRC-16 as crc16.asm and tools/crc_calculator.c */
+static uint16_t crc16_update(uint16_t crc, uint8_t a)
+{
+	crc ^= a;
+	for (int i = 0; i < 8; i++)
+		crc = crc & 1 ? (crc >> 1) ^ 0xA001 : crc >> 1;
+	return crc;
+}
+void crc16_bank1(uint8_t *v) { crc_value = crc16_update(crc_value, *v); }
 static unsigned reset_calls;
 void reset_chip(void) { reset_calls++; }
 void delay(uint16_t t) { (void)t; }
@@ -540,6 +554,7 @@ extern uint16_t slen, cont_len, sent_len, bindex, crc_final, write_len;
 extern uint8_t boundary[], verify_crc, outbuf[];
 extern struct { uint8_t *p; uint16_t bptr, plen; } upload_settings;
 extern uint8_t stream_upload(void);
+extern uint32_t uptr;
 
 static void scenario_upload_reset_owner(void)
 {
@@ -568,6 +583,7 @@ static void scenario_upload_reset_owner(void)
 	verify_crc = 1;
 	crc_final = 0xb001;
 	write_len = 0;
+	uptr = FIRMWARE_UPLOAD_END;	/* as after staging a whole image */
 	upload_settings.p = &byte;
 	upload_settings.bptr = 0;
 	upload_settings.plen = 1;
@@ -1012,6 +1028,99 @@ static void scenario_config_upload(void)
 	      "multipart/config: every split writes the exact configuration and NUL to its sector");
 }
 
+/* ---- firmware upload: staged length and the flash layout ---------------- */
+
+#ifdef LAYOUT_COMPACT
+#define OTHER_IMAGE_SIZE	0x80000		/* a standard-layout image */
+#else
+#define OTHER_IMAGE_SIZE	0x3f000		/* a compact-layout image */
+#endif
+
+/* Body bytes stream_upload() never consumed: it gave its verdict early */
+static uint32_t upload_unread;
+
+/* Streams a firmware image of len bytes, with a CRC-16 that comes out to
+ * 0xb001 unless bad_crc, and the closing delimiter through stream_upload(),
+ * as an upload body arrives: segment by segment. */
+static void upload_sized_image(uint32_t len, int bad_crc)
+{
+	static const char tail[] = "\r\n--XYZ--\r\n";
+	uint32_t blen = len + sizeof(tail) - 1;
+	uint8_t *body = malloc(blen);
+	uint16_t crc = 0;
+
+	for (uint32_t i = 0; i < len; i++)
+		body[i] = 0x20 + (i * 7 + (i >> 9)) % 0x5f;	/* printable, no '\r' */
+	body[0] = 0x00;
+	body[1] = 0x40;
+	/* The last byte is the CRC's high byte; keep it off '\r', which runs
+	 * into the delimiter matcher, a separate concern */
+	for (;;) {
+		crc = 0;
+		for (uint32_t i = 0; i < len - 2; i++)
+			crc = crc16_update(crc, body[i]);
+		crc ^= 0xffff;
+		if ((crc >> 8) != '\r')
+			break;
+		body[2]++;
+	}
+	body[len - 2] = crc;
+	body[len - 1] = crc >> 8;
+	memcpy(body + len, tail, sizeof(tail) - 1);
+	if (bad_crc)
+		body[len / 2] ^= 1;			/* corrupt after the CRC was set */
+
+	strcpy((char *)boundary, "\r\n--XYZ");
+	uip_conn = &uip_conns[0];
+	uip_conn->appstate.tstate = 4;		/* TSTATE_POST */
+	uip_conn->appstate.fw_reset_pending = 0;
+	bindex = 0;
+	write_len = 0;
+	crc_value = 0;
+	verify_crc = 1;
+	slen = 0;
+	outbuf[0] = 0;
+	uptr = FIRMWARE_UPLOAD_START;
+	max_write_end = 0;
+	uint32_t off = 0;
+	for (; off < blen && uip_conn->appstate.tstate == 4; off += 1460) {
+		upload_settings.p = body + off;
+		upload_settings.bptr = 0;
+		upload_settings.plen = blen - off < 1460 ? blen - off : 1460;
+		stream_upload();
+	}
+	upload_unread = off < blen ? blen - off : 0;
+	outbuf[slen < TCP_OUTBUF_SIZE ? slen : TCP_OUTBUF_SIZE - 1] = 0;
+	free(body);
+}
+
+static void scenario_upload_layout(void)
+{
+	char name[96];
+
+	upload_sized_image(IMAGE_SIZE, 0);
+	CHECK(strstr((char *)outbuf, "200 OK") && uip_conn->appstate.fw_reset_pending == 1,
+	      "upload: an image of this layout's size with a good CRC is accepted");
+	/* the verdict also writes a terminating NUL just past the image */
+	CHECK(max_write_end <= FIRMWARE_UPLOAD_END + 1
+	      && (CONFIG_START < IMAGE_SIZE || max_write_end <= CONFIG_START),
+	      "upload: an accepted image stays in the staging area, clear of the saved config");
+
+	upload_sized_image(IMAGE_SIZE, 1);
+	CHECK(strstr((char *)outbuf, "400 Bad Request") && !uip_conn->appstate.fw_reset_pending,
+	      "upload: an image with a bad CRC is refused");
+
+	upload_sized_image(OTHER_IMAGE_SIZE, 0);
+	snprintf(name, sizeof(name), "upload: a valid %u KiB image of the other layout is refused",
+		 (unsigned)(OTHER_IMAGE_SIZE / 1024));
+	CHECK(strstr((char *)outbuf, "400 Bad Request") && !uip_conn->appstate.fw_reset_pending, name);
+	CHECK(!upload_unread,
+	      "upload: a refused image is read to its end, so the client gets the verdict");
+	CHECK(max_write_end <= FIRMWARE_UPLOAD_END + 1
+	      && (CONFIG_START < IMAGE_SIZE || max_write_end <= CONFIG_START),
+	      "upload: a refused image never writes past the staging area");
+}
+
 int main(int argc, char **argv)
 {
 	if (argc > 1 && !strcmp(argv[1], "-v"))
@@ -1040,6 +1149,7 @@ int main(int argc, char **argv)
 	scenario_oversized_get_header();
 	scenario_split_method_names();
 	scenario_config_upload();
+	scenario_upload_layout();
 
 	printf("\n%s (%d failure%s)\n",
 	       failures ? "BENCH: FAILURES" : "BENCH: ALL PASS",

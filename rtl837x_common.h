@@ -98,14 +98,55 @@ struct vlan_tag {
 // This is the standard size of an Ethernet frame header
 #define ETHER_HEADER_SIZE	14
 
-#define DEFAULT_CONFIG_START 0x6f000
-#define CONFIG_START 0x70000
+/*
+ * Flash layout. The Makefile passes the same addresses to the image tools.
+ *
+ * Standard (512 KiB image, web updates need a 1 MiB flash):
+ *   0x00000 code, 0x40000 web UI, 0x6f000 default config,
+ *   0x70000 saved config, 0x7fffe CRC; an upload is staged at 0x80000
+ * Compact, LAYOUT=compact (252 KiB image, web updates on a 512 KiB flash):
+ *   0x00000 code, 0x28000 web UI, 0x3e000 default config, 0x3effe CRC;
+ *   an upload is staged at 0x3f000, 0x7e000 is spare, 0x7f000 saved config
+ */
+#ifdef LAYOUT_COMPACT
+#define IMAGE_SIZE		0x3f000
+#define DEFAULT_CONFIG_START	0x3e000
+#define CONFIG_START		0x7f000
+#else
+#define IMAGE_SIZE		0x80000
+#define DEFAULT_CONFIG_START	0x6f000
+#define CONFIG_START		0x70000
+#endif
 #define CONFIG_LEN 0x1000
 #define CODE0_SIZE 0x4000
 #define CODE_BANK_SIZE 0xc000
 
 // Store update image after running image
-#define FIRMWARE_UPLOAD_START 0x80000
+#define FIRMWARE_UPLOAD_START	IMAGE_SIZE
+#define FIRMWARE_UPLOAD_END	(FIRMWARE_UPLOAD_START + IMAGE_SIZE)
+/* Bytes of a staged image copied over the running one: all of it, unless the
+ * saved config sits inside the image, which the copy then stops short of */
+#if CONFIG_START < IMAGE_SIZE
+#define IMAGE_COPY_LEN		CONFIG_START
+#else
+#define IMAGE_COPY_LEN		IMAGE_SIZE
+#endif
+// The smallest flash that holds the image, a staged upload and the config
+#if CONFIG_START + CONFIG_LEN > FIRMWARE_UPLOAD_END
+#define FLASH_NEEDED_FOR_UPDATE	(CONFIG_START + CONFIG_LEN)
+#else
+#define FLASH_NEEDED_FOR_UPDATE	FIRMWARE_UPLOAD_END
+#endif
+
+#if IMAGE_SIZE % 0x1000 || CONFIG_START % 0x1000 || DEFAULT_CONFIG_START % 0x1000
+#error "flash layout: the image and the config sectors must be sector-aligned"
+#endif
+#if IMAGE_COPY_LEN % 0x1000
+#error "flash layout: the copied part of an update must be whole sectors"
+#endif
+#if CONFIG_START >= IMAGE_SIZE && CONFIG_START < FIRMWARE_UPLOAD_END
+#error "flash layout: the saved config must not lie in the upload staging area"
+#endif
 
 // Constants for the circular command buffer, the size must be 2^n
 #define CMD_HISTORY_SIZE 0x800
