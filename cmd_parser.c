@@ -638,8 +638,9 @@ void parse_vlan(void)
 			port_l2_static_mgmt(uip_ethaddr.addr, management_vlan, false);
 			if (!vlan_settings.vlan)
 				print_string("Management VLAN disabled\n");
-			else
+			else {
 				print_string("Management VLAN set to "); print_short(management_vlan); write_char('\n');
+			}
 			return;
 		}
 
@@ -1471,9 +1472,18 @@ void parse_passwd(void)
 {
 	// cmd_words_len can be more then 2 if a SPACE in the password.
 	if (cmd_words_len >= 2) {
-		uint8_t i = cmd_words_b[1];		
+		uint8_t i = cmd_words_b[1];
 		uint8_t c = 0;
 		uint8_t j = 0;
+		// Cut to fit passwd[], a password would become a prefix that no
+		// login matches: the login compares everything that was typed
+		while (cmd_buffer[i + j])
+			j++;
+		if (j > sizeof(passwd) - 1) {
+			cmd_error("Password longer than 20 characters\n");
+			return;
+		}
+		j = 0;
 		do {
 			c = cmd_buffer[i++];
 			passwd[j++] = c;

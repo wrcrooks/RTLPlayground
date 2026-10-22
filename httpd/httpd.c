@@ -191,7 +191,8 @@ bool is_url_word_x(__xdata uint8_t *uri_str_p, __xdata uint8_t *src_str_p)
 				u = (u << 4) | (u >> 4);
 
 				uint8_t p = *uri_str_p++;
-				u |= p - '0' < 10 ? (p - '0') : (p - 'A' + 10);
+				// | 0x20 folds 'A'-'F' onto 'a'-'f'; both cases are valid
+				u |= p - '0' < 10 ? (p - '0') : ((p | 0x20) - 'a' + 10);
 
 				// force `jbc`-instruction.
 				if (again) {
@@ -1060,7 +1061,8 @@ void httpd_appcall(void)
 				send_basic_info();
 			} else if (!strcmp(q, "/vlan.json")) {
 				parse_short(q + 15);
-				send_vlan(short_parsed);
+				if (send_vlan(short_parsed))
+					send_bad_request();
 			} else if (is_word(q, "/counters.json")) {
 				uint8_t cport = q[20] - '0';
 				if (send_counters(cport))
