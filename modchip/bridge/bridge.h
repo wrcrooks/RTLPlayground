@@ -4,7 +4,7 @@
 /*
  * Mod-chip bridge firmware: the 8051 initialises the switch, keeps the
  * SerDes and SFP slots working, and hands everything else to a host (the
- * RP2350 on the mod chip) over the UART. See modchip/ARCHITECTURE.md.
+ * RP2350 on the mod chip) over the UART. See modchip/bridge/README.md.
  */
 
 #define CLOCK_HZ 125000000

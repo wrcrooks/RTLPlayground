@@ -33,8 +33,7 @@ TESTS = $(BUILDDIR)/test_cmd_editor \
         $(BUILDDIR)/test_tick_gate \
         $(BUILDDIR)/test_nic_rx \
         $(BUILDDIR)/test_lacp \
-        $(BUILDDIR)/test_bridge_link \
-        ./test_bridge_link.py
+        $(BUILDDIR)/test_bridge_link
 
 # The table tests link the register mock and one environment file; stub/
 # stands in for the two headers a firmware build generates.
@@ -69,8 +68,8 @@ $(BUILDDIR)/test_page_json: test_page_json.c $(TABLE_ENV) hw_mock.h | $(BUILDDIR
 $(BUILDDIR)/test_lacp: test_lacp.c $(SRCROOT)/rtl837x_lacp.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-# modchip/bridge/link.c is compiled UNMODIFIED from the firmware tree;
-# test_bridge_link.py drives the same binary against the host's Python side.
+# modchip/bridge/link.c is compiled UNMODIFIED from the firmware tree; its --emit
+# output is the golden data the mod chip's Python side is tested against.
 $(BUILDDIR)/test_bridge_link: test_bridge_link.c $(SRCROOT)/modchip/bridge/link.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 

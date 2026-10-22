@@ -14,7 +14,8 @@
  * configuration) belongs to the host, normally the RP2350 on the mod chip,
  * which also reaches every switch register through the slave interface on
  * header T3. The link to the host is the UART on header T5; bridge_proto.h
- * defines the protocol and modchip/ARCHITECTURE.md describes the design.
+ * defines the protocol and modchip/bridge/README.md describes it. The mod
+ * chip itself: https://github.com/wrcrooks/rtlplayground-modchip
  */
 
 #include <8051.h>

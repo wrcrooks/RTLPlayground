@@ -7,8 +7,9 @@
  * (zero runs, 254-byte blocks, a full-size frame). The receiver must refuse
  * corrupted, truncated, oversized and lost-byte messages.
  *
- * With --emit or --decode it serves test_bridge_link.py, which checks the
- * same framing against the host's Python implementation.
+ * --emit prints the frames for the shared vectors: the mod chip repository
+ * (wrcrooks/rtlplayground-modchip) checks its Python side against them.
+ * --decode reads frames as hex lines and prints what link.c makes of them.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -124,7 +125,7 @@ static void hexline(const uint8_t *p, size_t n)
 	putchar('\n');
 }
 
-/* Payloads shared with test_bridge_link.py, generated identically there */
+/* Payloads shared with the mod chip repository's Python test, generated identically there */
 static size_t vector(int k, uint8_t *p)
 {
 	static const size_t lens[] = { 0, 1, 1, 253, 254, 255, 508, 509, 300, LINK_MSG_MAX - 4 };
