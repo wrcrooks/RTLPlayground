@@ -36,7 +36,7 @@ __xdata uint16_t idx;
 #define IGMP_GROUP_OFS		4
 #define IGMP_V3_RECORD_OFS	8
 
-static __xdata uint8_t igmp_grp;
+static __xdata uint16_t igmp_grp;	/* byte offset into uip_buf, can exceed 255 */
 static __xdata uint8_t igmp_join;
 
 #ifdef IPMC_USES_L3MC
@@ -208,51 +208,15 @@ void entry_to_l2mc(void)
 #endif
 
 
-uint8_t igmp_packet_handler(void) __banked
+/*
+ * Add or remove the ingress port for one multicast group in the ASIC
+ * tables. The group address is at uip_buf[igmp_grp] and igmp_join says
+ * whether the port is joining or leaving.
+ */
+static void igmp_apply_group(void)
 {
-	if (IGMP_I->ipv4_tag != HTONS(UIP_ETHTYPE_IP) || IGMP_I->protocol != IGMP_PROTO)
-		return 0;
-	// By default we do not send anything out
-	uip_len = 0;
-
-#ifdef DEBUG
-	print_string("\nIPv4 MC packet:\n");
-	for (uint8_t i = 0; i < 80; i++) {
-		print_byte(uip_buf[i]);
-		write_char(' ');
-	}
-	write_char('\n');
-#endif
-	igmp_grp = IGMP_IP_HDR + ((IGMP_I->hlen & IGMP_IP_IHL) << 2);
-#ifdef DEBUG
-	print_string("Found IGMP, type: "); print_byte(uip_buf[igmp_grp]); write_char('\n');
-#endif
-	switch (uip_buf[igmp_grp]) {
-	case IGMP_V1_REPORT:
-	case IGMP_V2_REPORT:
-		igmp_join = 1;
-		break;
-	case IGMP_V2_LEAVE:
-		igmp_join = 0;
-		break;
-	case IGMP_V3_REPORT:
-		igmp_grp += IGMP_V3_RECORD_OFS;
-		if (uip_buf[igmp_grp] == IGMP_V3_TO_EXCLUDE)
-			igmp_join = 1;
-		else if (uip_buf[igmp_grp] == IGMP_V3_TO_INCLUDE)
-			igmp_join = 0;
-		else
-			return 1;
-		break;
-	default:
-		return 1;
-	}
-	igmp_grp += IGMP_GROUP_OFS;
-#ifdef DEBUG
-	print_string("IGMP join "); print_byte(igmp_join); write_char('\n');
-#endif
 	if (uip_buf[igmp_grp] == IGMP_LOCAL_NET_0 && !uip_buf[igmp_grp + 1] && !uip_buf[igmp_grp + 2])
-		return 1;
+		return;
 
 #ifdef IPMC_USES_L3MC
 	memset((__xdata uint8_t *)&entry, 0, sizeof(struct ipmc_table_entry));
@@ -346,9 +310,9 @@ uint8_t igmp_packet_handler(void) __banked
 //			print_string("\nPort-Mask: "); print_short(entry.pmask); write_char('\n');
 		} else {
 			print_string("IGMP Entry already deleted\n");
-			return 1;
+			return;
 		}
-		if (!entry.pmask && idx) { // No more ports in that group and an actual entry?
+		if (!entry.pmask) { // No more ports in the group; the entry (idx, valid at 0) goes
 			// Delete Entry
 			reg_read_m(RTL837x_TBL_DATA_0);
 			sfr_data[1] |= 0x04;	// Clear entry
@@ -358,12 +322,12 @@ uint8_t igmp_packet_handler(void) __banked
 				reg_read_m(RTL837X_TBL_CTRL);
 			} while (sfr_data[3] & 0x1);
 			print_string("IGMP Entry deleted\n");
-			return 1;
+			return;
 		}
 	}
 
 	if (!entry.pmask)
-		return 1;
+		return;
 	print_string("Updating IGMP entry\n");
 	// Write the updated entry
 #ifdef IPMC_USES_L3MC
@@ -400,5 +364,79 @@ uint8_t igmp_packet_handler(void) __banked
 	reg_read_m(RTL837x_TBL_DATA_0);
 	print_sfr_data();
 #endif
-	return 1;
+	return;
+}
+
+
+uint8_t igmp_packet_handler(void) __banked
+{
+	__xdata uint16_t frame_len, rec, rec_end, nrec;
+	__xdata uint8_t rtype;
+
+	if (IGMP_I->ipv4_tag != HTONS(UIP_ETHTYPE_IP) || IGMP_I->protocol != IGMP_PROTO)
+		return 0;
+	// Length as received, before uip_len is cleared; bounds the record walk
+	frame_len = uip_len;
+	if (frame_len > sizeof(uip_buf))
+		frame_len = sizeof(uip_buf);
+	// By default we do not send anything out
+	uip_len = 0;
+
+	igmp_grp = IGMP_IP_HDR + ((IGMP_I->hlen & IGMP_IP_IHL) << 2);
+	if ((uint16_t)igmp_grp + IGMP_GROUP_OFS + 4 > frame_len)
+		return 1;
+
+	switch (uip_buf[igmp_grp]) {
+	case IGMP_V1_REPORT:
+	case IGMP_V2_REPORT:
+		igmp_join = 1;
+		igmp_grp += IGMP_GROUP_OFS;
+		igmp_apply_group();
+		return 1;
+	case IGMP_V2_LEAVE:
+		igmp_join = 0;
+		igmp_grp += IGMP_GROUP_OFS;
+		igmp_apply_group();
+		return 1;
+	case IGMP_V3_REPORT:
+		/* v3 report header: type, reserved, checksum, reserved, and a
+		 * 16-bit record count; the group records follow it. Every record
+		 * is handled, not just the first, so a report that answers a
+		 * general query re-joins all of its groups. */
+		if ((uint16_t)igmp_grp + IGMP_V3_RECORD_OFS > frame_len)
+			return 1;
+		nrec = ((uint16_t)uip_buf[igmp_grp + 6] << 8) | uip_buf[igmp_grp + 7];
+		rec = (uint16_t)igmp_grp + IGMP_V3_RECORD_OFS;
+		while (nrec-- && rec + 8 <= frame_len) {
+			rtype = uip_buf[rec];
+			/* record: type, aux-data length, source count, group
+			 * address, then the sources and aux data, each counted
+			 * in 32-bit words */
+			rec_end = rec + 8
+				+ ((((uint16_t)uip_buf[rec + 2] << 8 | uip_buf[rec + 3])) << 2)
+				+ ((uint16_t)uip_buf[rec + 1] << 2);
+			if (rec_end > frame_len || rec_end <= rec)
+				break;
+			/* A host reports each joined group as MODE_IS_EXCLUDE, so an
+			 * exclude is a join. An include with no sources is a leave;
+			 * with sources the group is still wanted. Source-specific
+			 * blocks need per-source state we do not keep, so they and
+			 * any unknown type are left alone. */
+			if ((rtype == IGMP_V3_MODE_IS_INCLUDE || rtype == IGMP_V3_TO_INCLUDE)
+			    && !uip_buf[rec + 2] && !uip_buf[rec + 3]) {
+				igmp_join = 0;
+			} else if (rtype < IGMP_V3_MODE_IS_INCLUDE || rtype > IGMP_V3_ALLOW_NEW) {
+				rec = rec_end;
+				continue;
+			} else {
+				igmp_join = 1;
+			}
+			igmp_grp = rec + IGMP_GROUP_OFS;
+			igmp_apply_group();
+			rec = rec_end;
+		}
+		return 1;
+	default:
+		return 1;
+	}
 }
