@@ -115,8 +115,8 @@ cw_verify_fail:"Verification failed: flash content differs from what was sent. C
 cw_saved:"Startup configuration saved and verified",cw_collect:"Collecting running changes...",
 t_applied:"Applied: {c}",t_cmds:"{n} command(s) applied",t_rejected:"command rejected: {c}",t_failed:"failed: {c}",
 fw_title:"Firmware update",
-fw_intro:"Upload an RTLPlayground image (512 KiB .bin). The image is staged to flash and CRC-checked; on success the switch reboots itself, re-verifies the image and applies it. The startup configuration is preserved.",
-fw_upload:"Upload",fw_checking:"{f}: {n} bytes. Checking...",fw_size_err:"size is {n}, expected 524288 (512 KiB)",
+fw_intro:"Upload an RTLPlayground image (512 KiB .bin, or 252 KiB for a compact build). The image is staged to flash and CRC-checked; on success the switch reboots itself, re-verifies the image and applies it. The startup configuration is preserved.",
+fw_upload:"Upload",fw_checking:"{f}: {n} bytes. Checking...",fw_size_err:"size is {n}, expected 524288 (512 KiB) or 258048 (252 KiB)",
 fw_magic_err:"missing bank header / LJMP magic: not a firmware image",fw_crc_err:"CRC16 check failed: corrupt image",
 fw_valid:"valid RTLPlayground image (size, magic and CRC16 OK)",fw_q:"Upload firmware?",
 fw_other:"This image was not built for this switch ({m}): its SFP, LED and button pins may differ. Upload it only if you are sure.",
@@ -229,8 +229,8 @@ cw_verify_fail:"検証失敗: フラッシュの内容が送信内容と異な�
 cw_saved:"起動設定を保存し検証しました",cw_collect:"実行中の変更を収集中...",
 t_applied:"適用: {c}",t_cmds:"{n} 件のコマンドを適用しました",t_rejected:"コマンドが拒否されました: {c}",t_failed:"失敗: {c}",
 fw_title:"ファームウェア更新",
-fw_intro:"RTLPlayground イメージ (512 KiB の .bin) をアップロードします。イメージはフラッシュに書き込まれ CRC を検証され、成功するとスイッチが自動的に再起動して再検証のうえ適用します。起動設定は保持されます。",
-fw_upload:"アップロード",fw_checking:"{f}: {n} バイト。確認中...",fw_size_err:"サイズが {n} です。524288 (512 KiB) が必要です",
+fw_intro:"RTLPlayground イメージ (512 KiB の .bin、コンパクトビルドは 252 KiB) をアップロードします。イメージはフラッシュに書き込まれ CRC を検証され、成功するとスイッチが自動的に再起動して再検証のうえ適用します。起動設定は保持されます。",
+fw_upload:"アップロード",fw_checking:"{f}: {n} バイト。確認中...",fw_size_err:"サイズが {n} です。524288 (512 KiB) または 258048 (252 KiB) が必要です",
 fw_magic_err:"バンクヘッダ / LJMP マジックがありません: ファームウェアイメージではありません",fw_crc_err:"CRC16 検証に失敗しました: イメージが破損しています",
 fw_valid:"有効な RTLPlayground イメージです (サイズ、マジック、CRC16 OK)",fw_q:"ファームウェアをアップロードしますか?",
 fw_d:"チェックサムが正しければスイッチは自動的にリセットし、起動時にイメージを適用します (起動設定は保持されます)。復帰するまで電源を切らないでください。",
@@ -342,8 +342,8 @@ cw_verify_fail:"校验失败: Flash 内容与发送内容不一致。命令日�
 cw_saved:"启动配置已保存并校验",cw_collect:"正在收集运行中的更改...",
 t_applied:"已应用: {c}",t_cmds:"已应用 {n} 条命令",t_rejected:"命令被拒绝: {c}",t_failed:"失败: {c}",
 fw_title:"固件升级",
-fw_intro:"上传 RTLPlayground 镜像 (512 KiB 的 .bin)。镜像会写入 Flash 并进行 CRC 校验；成功后交换机自动重启，再次校验并应用镜像。启动配置将被保留。",
-fw_upload:"上传",fw_checking:"{f}: {n} 字节。正在检查...",fw_size_err:"大小为 {n}，应为 524288 (512 KiB)",
+fw_intro:"上传 RTLPlayground 镜像 (512 KiB 的 .bin，紧凑构建为 252 KiB)。镜像会写入 Flash 并进行 CRC 校验；成功后交换机自动重启，再次校验并应用镜像。启动配置将被保留。",
+fw_upload:"上传",fw_checking:"{f}: {n} 字节。正在检查...",fw_size_err:"大小为 {n}，应为 524288 (512 KiB) 或 258048 (252 KiB)",
 fw_magic_err:"缺少 bank 头 / LJMP 魔数: 不是固件镜像",fw_crc_err:"CRC16 校验失败: 镜像已损坏",
 fw_valid:"有效的 RTLPlayground 镜像 (大小、魔数和 CRC16 正确)",fw_q:"上传固件?",
 fw_d:"校验和正确时交换机会自动复位并在启动时应用镜像 (启动配置保留)。在其恢复前请勿断电。",
@@ -454,8 +454,8 @@ cw_verify_fail:"Verificación fallida: el contenido de la flash difiere de lo en
 cw_saved:"Configuración de inicio guardada y verificada",cw_collect:"Recopilando cambios en ejecución...",
 t_applied:"Aplicado: {c}",t_cmds:"{n} comando(s) aplicado(s)",t_rejected:"comando rechazado: {c}",t_failed:"fallo: {c}",
 fw_title:"Actualización de firmware",
-fw_intro:"Sube una imagen de RTLPlayground (512 KiB .bin). La imagen se almacena provisionalmente en flash y se comprueba con CRC; si es correcta, el switch se reinicia, vuelve a verificar la imagen y la aplica. La configuración de inicio se conserva.",
-fw_upload:"Subir",fw_checking:"{f}: {n} bytes. Comprobando...",fw_size_err:"el tamaño es {n}, se esperaban 524288 (512 KiB)",
+fw_intro:"Sube una imagen de RTLPlayground (512 KiB .bin, o 252 KiB en una compilación compacta). La imagen se almacena provisionalmente en flash y se comprueba con CRC; si es correcta, el switch se reinicia, vuelve a verificar la imagen y la aplica. La configuración de inicio se conserva.",
+fw_upload:"Subir",fw_checking:"{f}: {n} bytes. Comprobando...",fw_size_err:"el tamaño es {n}, se esperaban 524288 (512 KiB) o 258048 (252 KiB)",
 fw_magic_err:"falta la cabecera de banco / magia LJMP: no es una imagen de firmware",fw_crc_err:"comprobación CRC16 fallida: imagen corrupta",
 fw_valid:"imagen de RTLPlayground válida (tamaño, magia y CRC16 correctos)",fw_q:"¿Subir firmware?",
 fw_d:"Si la suma de comprobación es correcta, el switch se reinicia y aplica la imagen durante el arranque (la configuración de inicio se conserva). No lo apagues hasta que vuelva.",
@@ -570,8 +570,8 @@ cw_verify_fail:"Verification erronée: La mémoire flash présente des différen
 cw_saved:"Configuration de démarrage sauvegardée et vérifiée",cw_collect:"Récolement des modification des paramètres courants...",
 t_applied:"Appliqué: {c}",t_cmds:"{n} commande(s) appliquée(s)",t_rejected:"commandes rejetées: {c}",t_failed:"échecs: {c}",
 fw_title:"Mise à jour du micro-logiciel",
-fw_intro:"Charge une image RTLPlayground (512 KiB .bin). L'image est envoée en mémoire flash, analysée et sa somme de contrôle est vérifiée; en cas de succès le commutateur va redémarrer, re-verifiez l'image et appliquez-là. LA configuration de démarrage est conservée.",
-fw_upload:"Charger",fw_checking:"{f}: {n} bytes. Vérification...",fw_size_err:"la taille est {n} alors que nous attendons 524288 (512 KiB)",
+fw_intro:"Charge une image RTLPlayground (512 KiB .bin, ou 252 KiB pour une version compacte). L'image est envoée en mémoire flash, analysée et sa somme de contrôle est vérifiée; en cas de succès le commutateur va redémarrer, re-verifiez l'image et appliquez-là. LA configuration de démarrage est conservée.",
+fw_upload:"Charger",fw_checking:"{f}: {n} bytes. Vérification...",fw_size_err:"la taille est {n} alors que nous attendons 524288 (512 KiB) ou 258048 (252 KiB)",
 fw_magic_err:"Entête de banque de donnée manquant / contrôle LJMP: ce n'est pas une image de firmware",fw_crc_err:"Somme de contrôle erronée: image corrompue",
 fw_valid:"Image RTLPlayground valide (taille, LJMP et somme de contrôle OK)",fw_q:"Chargement du firmware?",
 fw_other:"Cette image n'a pas été prévue pour ce commutateur({m}): La puce, les LED et les boouton peuvent être différents. Poursuivez seulement si vous êtes sûrs de vous.",
@@ -693,8 +693,8 @@ cw_verify_fail:"Prüfung fehlgeschlagen: Der Flash-Inhalt weicht vom Gesendeten 
 cw_saved:"Startkonfiguration gespeichert und geprüft",cw_collect:"Laufende Änderungen werden gesammelt...",
 t_applied:"Übernommen: {c}",t_cmds:"{n} Befehl(e) übernommen",t_rejected:"Befehl abgelehnt: {c}",t_failed:"fehlgeschlagen: {c}",
 fw_title:"Firmware-Update",
-fw_intro:"Ein RTLPlayground-Image hochladen (.bin, 512 KiB). Das Image wird im Flash abgelegt und per CRC geprüft; ist es in Ordnung, startet der Switch neu, prüft das Image erneut und übernimmt es. Die Startkonfiguration bleibt erhalten.",
-fw_upload:"Hochladen",fw_checking:"{f}: {n} Bytes. Wird geprüft...",fw_size_err:"Grösse ist {n}, erwartet 524288 (512 KiB)",
+fw_intro:"Ein RTLPlayground-Image hochladen (.bin, 512 KiB, bei einem kompakten Build 252 KiB). Das Image wird im Flash abgelegt und per CRC geprüft; ist es in Ordnung, startet der Switch neu, prüft das Image erneut und übernimmt es. Die Startkonfiguration bleibt erhalten.",
+fw_upload:"Hochladen",fw_checking:"{f}: {n} Bytes. Wird geprüft...",fw_size_err:"Grösse ist {n}, erwartet 524288 (512 KiB) oder 258048 (252 KiB)",
 fw_magic_err:"Bank-Header / LJMP-Kennung fehlt: kein Firmware-Image",fw_crc_err:"CRC16-Prüfung fehlgeschlagen: Image beschädigt",
 fw_valid:"gültiges RTLPlayground-Image (Grösse, Kennung und CRC16 in Ordnung)",fw_q:"Firmware hochladen?",
 fw_other:"Dieses Image wurde nicht für diesen Switch ({m}) gebaut: SFP-, LED- und Tasten-Pins können abweichen. Nur hochladen, wenn du sicher bist.",
@@ -2388,7 +2388,9 @@ $("fwfile").addEventListener("change",function(){
   info.textContent=t("fw_checking",{f:f.name,n:f.size});
   f.arrayBuffer().then(function(buf){
     var u=new Uint8Array(buf),msg=null;
-    if(u.length!==524288)msg=t("fw_size_err",{n:u.length});
+    /* 512 KiB standard layout or 252 KiB compact one; the switch refuses the
+       one it was not built for */
+    if(u.length!==524288&&u.length!==258048)msg=t("fw_size_err",{n:u.length});
     else if(u[0]!==0x00||u[1]!==0x40||u[2]!==0x02)msg=t("fw_magic_err");
     else{
       var crc=0;

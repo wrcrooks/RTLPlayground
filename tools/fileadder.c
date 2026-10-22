@@ -357,6 +357,18 @@ int main(int argc, char **argv)
 			if (! (s.st_mode & S_IFREG))
 				continue;
 
+			/* The raw file is read into the image, then shrunk in place
+			 * (calls replaced, gzip). Restore what lay past its final end,
+			 * such as data placed there earlier, rather than leaving the
+			 * raw tail over it. */
+			size_t span = s.st_size + 1;
+			unsigned char *saved = malloc(span);
+			if (!saved) {
+				perror("malloc");
+				return 5;
+			}
+			memcpy(saved, &buffer[addr], span);
+
 			size_t data_read = addfile(pathbuffer, addr);
 			size_t file_len = data_read;
 			if (data_read) {
@@ -375,9 +387,14 @@ int main(int argc, char **argv)
 				memset(buffer + addr + data_read, 0, old_len - data_read);
 			if (arguments.gzip)
 				data_read = gzipBuffer(addr, data_read);
+			if ((size_t)data_read < span)
+				memcpy(&buffer[addr + data_read], saved + data_read, span - data_read);
+			free(saved);
 			addidx(in_file->d_name, addr, data_read);
 			addr += data_read;
 		}
+		// End of the files, so the firmware can check what lies after them
+		defbuf_p += snprintf(&dbuf[defbuf_p], DEF_SIZE - defbuf_p, "#define FDATA_END 0x%x\n", addr);
 		for (int e = 0; e < n_entries; e++)
 			free(entries[e]);
 		free(entries);
