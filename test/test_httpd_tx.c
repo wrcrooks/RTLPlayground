@@ -1036,6 +1036,9 @@ static void scenario_config_upload(void)
 #define OTHER_IMAGE_SIZE	0x3f000		/* a compact-layout image */
 #endif
 
+/* Body bytes stream_upload() never consumed: it gave its verdict early */
+static uint32_t upload_unread;
+
 /* Streams a firmware image of len bytes, with a CRC-16 that comes out to
  * 0xb001 unless bad_crc, and the closing delimiter through stream_upload(),
  * as an upload body arrives: segment by segment. */
@@ -1079,12 +1082,14 @@ static void upload_sized_image(uint32_t len, int bad_crc)
 	outbuf[0] = 0;
 	uptr = FIRMWARE_UPLOAD_START;
 	max_write_end = 0;
-	for (uint32_t off = 0; off < blen && uip_conn->appstate.tstate == 4; off += 1460) {
+	uint32_t off = 0;
+	for (; off < blen && uip_conn->appstate.tstate == 4; off += 1460) {
 		upload_settings.p = body + off;
 		upload_settings.bptr = 0;
 		upload_settings.plen = blen - off < 1460 ? blen - off : 1460;
 		stream_upload();
 	}
+	upload_unread = off < blen ? blen - off : 0;
 	outbuf[slen < TCP_OUTBUF_SIZE ? slen : TCP_OUTBUF_SIZE - 1] = 0;
 	free(body);
 }
@@ -1109,6 +1114,8 @@ static void scenario_upload_layout(void)
 	snprintf(name, sizeof(name), "upload: a valid %u KiB image of the other layout is refused",
 		 (unsigned)(OTHER_IMAGE_SIZE / 1024));
 	CHECK(strstr((char *)outbuf, "400 Bad Request") && !uip_conn->appstate.fw_reset_pending, name);
+	CHECK(!upload_unread,
+	      "upload: a refused image is read to its end, so the client gets the verdict");
 	CHECK(max_write_end <= FIRMWARE_UPLOAD_END + 1
 	      && (CONFIG_START < IMAGE_SIZE || max_write_end <= CONFIG_START),
 	      "upload: a refused image never writes past the staging area");

@@ -497,9 +497,12 @@ uint8_t stream_upload(void)
 		if (!boundary[bindex]) {
 			s->tstate = TSTATE_NONE;
 			dbg_string("len 2: "); dbg_short(write_len); dbg_char(' ');
-			flash_region.addr = uptr;
-			flash_region.len = write_len;
-			flash_write_bytes(flash_buf);
+			// Past the staging area nothing is written, see below
+			if (uptr < FIRMWARE_UPLOAD_END) {
+				flash_region.addr = uptr;
+				flash_region.len = write_len;
+				flash_write_bytes(flash_buf);
+			}
 			uptr += write_len;
 			write_len = 0;
 			if (verify_crc) {
@@ -524,10 +527,12 @@ uint8_t stream_upload(void)
 				}
 			}
 			// Make sure there is a 0 at the end of the uploaded data
-			flash_buf[0] = 0;
-			flash_region.addr = uptr;
-			flash_region.len = 1;
-			flash_write_bytes(flash_buf);
+			if (uptr <= FIRMWARE_UPLOAD_END) {
+				flash_buf[0] = 0;
+				flash_region.addr = uptr;
+				flash_region.len = 1;
+				flash_write_bytes(flash_buf);
+			}
 			if (upload_settings.bptr >= upload_settings.plen)
 				return 0;
 			return 1;
@@ -549,27 +554,24 @@ uint8_t stream_upload(void)
 			if (write_len >= FLASH_PAGE_SIZE) {
 				/* The staged image spans FIRMWARE_UPLOAD_START to
 				 * FIRMWARE_UPLOAD_END, the span check_and_flash_update_image()
-				 * reads back. Nothing else bounds uptr: a body whose closing
-				 * boundary never arrives keeps writing, into the saved config
-				 * of the compact layout or, on a flash exactly this size, onto
-				 * the running image at zero. */
-				if (uptr >= FIRMWARE_UPLOAD_END) {
-					print_string("Upload runs past the image area! Aborting.\n");
-					slen = strtox(outbuf, "HTTP/1.1 400 Bad Request\r\nContent-Length: 30\r\n"
-						"Content-Type: text/plain\r\n\r\n"
-						"NO: upload exceeds image area\n");
-					s->tstate = TSTATE_NONE;
-					return 0;
-				}
-				dbg_string("len: "); dbg_short(write_len); dbg_char(' ');
-				dbg_string("CRC16: "); dbg_short(crc_value); dbg_char('\n');
-				if (uptr % FLASH_SECTOR_SIZE == 0) {
+				 * reads back. Past it would lie the saved config of the
+				 * compact layout or, on a flash exactly this size, the running
+				 * image at zero, so nothing is written there. An image too
+				 * long for the area is still read to its end, uptr counting
+				 * on, and refused by the length check once it is complete:
+				 * a client reads the verdict only after sending its whole
+				 * body, and stopping early would leave it with none. */
+				if (uptr < FIRMWARE_UPLOAD_END) {
+					dbg_string("len: "); dbg_short(write_len); dbg_char(' ');
+					dbg_string("CRC16: "); dbg_short(crc_value); dbg_char('\n');
+					if (uptr % FLASH_SECTOR_SIZE == 0) {
+						flash_region.addr = uptr;
+						flash_sector_erase();
+					}
 					flash_region.addr = uptr;
-					flash_sector_erase();
+					flash_region.len = FLASH_PAGE_SIZE;
+					flash_write_bytes(flash_buf);
 				}
-				flash_region.addr = uptr;
-				flash_region.len = FLASH_PAGE_SIZE;
-				flash_write_bytes(flash_buf);
 				uptr += FLASH_PAGE_SIZE;
 				write_len -= FLASH_PAGE_SIZE;
 
