@@ -9,7 +9,10 @@ compact one, where it follows the web UI.
 import gzip, pathlib, re, subprocess, sys, tempfile
 
 root = pathlib.Path(__file__).resolve().parent.parent
-subprocess.run(["make", "-s", "-C", str(root / "tools")], check=True, stdout=subprocess.DEVNULL)
+# Only fileadder: httpd_sim needs the version.h a firmware build generates,
+# and CI runs these tests first
+subprocess.run(["make", "-s", "-C", str(root / "tools"), "create_build_dir", "output/fileadder"],
+               check=True, stdout=subprocess.DEVNULL)
 tool = str(root / "tools/output/fileadder")
 failures = 0
 
