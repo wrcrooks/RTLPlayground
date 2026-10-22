@@ -32,7 +32,9 @@ TESTS = $(BUILDDIR)/test_cmd_editor \
         ./test_fileadder.py \
         $(BUILDDIR)/test_tick_gate \
         $(BUILDDIR)/test_nic_rx \
-        $(BUILDDIR)/test_lacp
+        $(BUILDDIR)/test_lacp \
+        $(BUILDDIR)/test_bridge_link \
+        ./test_bridge_link.py
 
 # The table tests link the register mock and one environment file; stub/
 # stands in for the two headers a firmware build generates.
@@ -65,6 +67,11 @@ $(BUILDDIR)/test_page_json: test_page_json.c $(TABLE_ENV) hw_mock.h | $(BUILDDIR
 
 # rtl837x_lacp.c is compiled UNMODIFIED from the firmware tree.
 $(BUILDDIR)/test_lacp: test_lacp.c $(SRCROOT)/rtl837x_lacp.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+# modchip/bridge/link.c is compiled UNMODIFIED from the firmware tree;
+# test_bridge_link.py drives the same binary against the host's Python side.
+$(BUILDDIR)/test_bridge_link: test_bridge_link.c $(SRCROOT)/modchip/bridge/link.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 # The same bench with the compact flash layout's addresses
