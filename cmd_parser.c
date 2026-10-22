@@ -715,6 +715,28 @@ err:
 }
 
 
+/* igmp router (none | <port>...): ports with a multicast router that does not
+ * query, which IGMP snooping then sends membership reports and leaves to */
+void parse_igmp_router(void)
+{
+	uint16_t pmask = 0;
+
+	if (cmd_words_len < 3)
+		goto err;
+	if (!(cmd_words_len == 3 && cmd_compare(2, "none"))) {
+		for (uint8_t w = 2; w < cmd_words_len; w++) {
+			if (!cmd_parse_port_separator(cmd_words_b[w]))
+				goto err;
+			pmask |= ((uint16_t)1) << atoi_results_u8;
+		}
+	}
+	igmp_rport_static = pmask;
+	return;
+err:
+	cmd_error("igmp router (none | <port>...)\n");
+}
+
+
 void parse_isolate(void)
 {
 	uint16_t members = 0;
@@ -1970,8 +1992,10 @@ void cmd_parser(void) __banked
 				igmp_setup();
 			else if (cmd_compare(1, "show"))
 				igmp_show();
+			else if (cmd_compare(1, "router"))
+				parse_igmp_router();
 			else {
-				cmd_error("igmp on|off|show\n");
+				cmd_error("igmp on|off|show|router (none | <port>...)\n");
 			}
 		} else if (cmd_compare(0, "mac")) {
 			parse_mac_cmd();

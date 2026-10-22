@@ -1177,6 +1177,8 @@ static void handle_tick(void)
 			arp_age_secs = 0;
 			uip_arp_timer();
 		}
+		// Age the IGMP router ports learned from queries
+		igmp_tick();
 
 #ifdef DEBUG
 		print_sfr_data();
@@ -1710,6 +1712,7 @@ void main(void)
 	trap_init();
 	vlan_setup();
 	port_l2_setup();
+	igmp_init();
 	igmp_setup();
 	bandwidth_setup();
 	uip_init();
