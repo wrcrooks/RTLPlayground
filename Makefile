@@ -1,8 +1,21 @@
 VERSION=0.1.0
+
+# Flash layout, as in rtl837x_common.h. LAYOUT=compact packs the image into
+# 252 KiB, so that a web upload can be staged on a 512 KiB flash; the default
+# 512 KiB image needs a 1 MiB flash for that.
+ifeq ($(LAYOUT),compact)
+IMAGESIZE = 258048
+DEFAULT_CONFIG_LOCATION = 253952
+HTML_LOCATION = 163840
+FLASH_512K = 524288
+else ifeq ($(LAYOUT),)
 IMAGESIZE = 524288
 DEFAULT_CONFIG_LOCATION = 454656
 CONFIG_LOCATION = 458752
 HTML_LOCATION = 262144
+else
+$(error LAYOUT must be unset or "compact")
+endif
 
 ifeq ($(origin CC),default)
 CC = sdcc
@@ -30,6 +43,9 @@ endif
 ifeq ($(CI),1)
 	CC_FLAGS += --Werror
 endif
+ifeq ($(LAYOUT),compact)
+	CC_FLAGS += -DLAYOUT_COMPACT
+endif
 
 # The board definition being built: one file per MACHINE_* symbol in machine.h.
 MACHINE_SRC = machine/$(MACHINE).c
@@ -44,7 +60,7 @@ else
 endif
 
 VERSION_EXTENSION = v$(VERSION)-$(GIT_VERSION)
-FILENAME_EXTENSION = $(VERSION_EXTENSION)-$(MACHINE)
+FILENAME_EXTENSION = $(VERSION_EXTENSION)-$(MACHINE)$(if $(filter compact,$(LAYOUT)),-compact)
 
 # Deterministic build date: honor SOURCE_DATE_EPOCH, else the HEAD commit date,
 # else wall-clock (no-git fallback). Keeps same-commit builds byte-identical
@@ -140,7 +156,14 @@ html_min: $(HTML)
 	mkdir -p $(HTML_MIN)
 	@for f in $(HTML); do python3 tools/minify.py $$f $(HTML_MIN)/$$(basename $$f) || exit 1; done
 
-html_data.c html_data.h &: $(HTML) | tools html_min
+# The file table holds flash addresses, so it follows the layout too
+LAYOUT_STAMP := output/.layout
+
+$(LAYOUT_STAMP): FORCE
+	@mkdir -p output
+	@echo '$(HTML_LOCATION) $(IMAGESIZE)' | cmp -s - $@ 2>/dev/null || echo '$(HTML_LOCATION) $(IMAGESIZE)' > $@
+
+html_data.c html_data.h &: $(HTML) $(LAYOUT_STAMP) | tools html_min
 	tools/output/fileadder -a $(HTML_LOCATION) -s $(IMAGESIZE) -b BANK1 -z -d $(HTML_MIN) -p html_data
 
 $(VERSION_HEADER): FORCE
@@ -195,9 +218,18 @@ $(BUILDDIR)/rtlplayground-$(FILENAME_EXTENSION).bin: $(BUILDDIR)/rtlplayground.i
 	if [ -e $@ ]; then rm $@; fi
 	tools/output/imagebuilder -i $^ $@
 	tools/output/fileadder -a $(DEFAULT_CONFIG_LOCATION) -s $(IMAGESIZE) -d config.txt $@
+ifneq ($(LAYOUT),compact)
 	tools/output/fileadder -a $(CONFIG_LOCATION) -s $(IMAGESIZE) -d config.txt $@
+endif
 	tools/output/fileadder -a $(HTML_LOCATION) -s $(IMAGESIZE) -z -d $(HTML_MIN) -b BANK1 $@
 	tools/output/crc_calculator -u $@
+ifeq ($(LAYOUT),compact)
+	# The whole chip for a programmer: the image, then erased flash. The
+	# saved config lies outside the image; the firmware fills its blank
+	# sector from the default config on the first boot.
+	{ cat $@; head -c $$(( $(FLASH_512K) - $(IMAGESIZE) )) /dev/zero | tr '\000' '\377'; } \
+		> $(@:.bin=-flash512k.bin)
+endif
 	ln -sf $(MACHINE)/rtlplayground-$(FILENAME_EXTENSION).bin output/rtlplayground.bin
 
 .PHONY: clean distclean all $(SUBDIRS) $(SUBDIRSCLEAN) create_build_dir

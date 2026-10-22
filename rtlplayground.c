@@ -1472,8 +1472,8 @@ void check_and_flash_update_image(void)
 {
 	flash_read_jedecid(); // This initializes also __xdata flash_size variable
 
-	print_string(get_flash_size_str()); print_string(" flash size detected. (1 MB is needed for image updating)\n");
-	if (flash_size < FIRMWARE_UPLOAD_START*2) {
+	print_string(get_flash_size_str()); print_string(" flash size detected.\n");
+	if (flash_size < FLASH_NEEDED_FOR_UPDATE) {
 		print_string("Flash too small for updating; skipping update check\n");
 		return;
 	}
@@ -1495,7 +1495,7 @@ void check_and_flash_update_image(void)
 		flash_init(0); // Re-initialize flash for non-DIO operation, otherwise flashing will fail
 		set_sys_led_state(SYS_LED_FAST);
 		crc_value = 0x0000;
-		for (i = 0; i < 1024; i++) {
+		for (i = 0; i < IMAGE_SIZE / FLASH_BUF_SIZE; i++) {
 			flash_region.addr = source;
 			flash_region.len = FLASH_BUF_SIZE;
 			flash_read_bulk(flash_buf);
@@ -1509,8 +1509,8 @@ void check_and_flash_update_image(void)
 		if (crc_value == 0xb001) {
 			print_string("Checksum OK.\nUpdate in progress, moving firmware to start of flash");
 			source = FIRMWARE_UPLOAD_START;
-			// Don't copy the config area at the end of flash
-			for (i = 0; i < CONFIG_START/FLASH_BUF_SIZE; i++) {
+			// Don't copy over a saved config that lies inside the image
+			for (i = 0; i < IMAGE_COPY_LEN / FLASH_BUF_SIZE; i++) {
 				flash_region.addr = source;
 				flash_region.len = FLASH_BUF_SIZE;
 				flash_read_bulk(flash_buf);
@@ -1526,8 +1526,10 @@ void check_and_flash_update_image(void)
 				source += FLASH_BUF_SIZE;
 			}
 			print_string("Done.\nDeleting uploaded flash image");
+			/* Only the staging area: on a 512 KiB flash, erasing further
+			 * would wrap around onto the image just copied */
 			dest = FIRMWARE_UPLOAD_START;
-			for (register uint8_t i=0; i < 128; i++) // TODO: Erasing the entire 512kByte upload area is probably not necessary
+			for (register uint8_t i=0; i < IMAGE_SIZE / 0x1000; i++)
 			{
 				flash_region.addr = dest;
 				flash_sector_erase();
@@ -1541,7 +1543,7 @@ void check_and_flash_update_image(void)
 		print_string("Checksum incorrect, please upload the image again\n");
 		print_string("Erasing bad uploaded flash image\n");
 		dest = FIRMWARE_UPLOAD_START;
-		for (register uint8_t i=0; i < 128; i++) {
+		for (register uint8_t i=0; i < IMAGE_SIZE / 0x1000; i++) {
 			flash_region.addr = dest;
 			flash_sector_erase();
 			dest += 0x1000;
@@ -1733,6 +1735,20 @@ void main(void)
 	port_stats_print();
 
 	early_boot_handle_button();
+
+	/* A blank config sector holds only 0xff, which would replay as one
+	 * overlong command: start from the default config instead. This is
+	 * what a programmer leaves behind when it writes the whole chip, which
+	 * is how a compact image is first installed. */
+	flash_region.addr = CONFIG_START;
+	flash_region.len = 0x100;
+	flash_read_bulk(flash_buf);
+	if (flash_buf[0] == 0xff) {
+		print_string("Config sector is blank, writing the default config\n");
+		flash_init(0);	// writes need non-DIO operation
+		flash_default_config();
+		flash_init(machine.flash_sio ? 0 : 1);
+	}
 
 	execute_config();
 	// After the config so the entry lands in the final management VLAN
