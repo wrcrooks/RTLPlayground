@@ -67,7 +67,7 @@ $(BUILDDIR)/test_lacp: test_lacp.c $(SRCROOT)/rtl837x_lacp.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 # rtl837x_igmp.c is compiled UNMODIFIED; it reuses the register/table mock.
-$(BUILDDIR)/test_igmp: test_igmp.c hw_mock.c env_tables.c $(SRCROOT)/rtl837x_igmp.c | $(BUILDDIR)
+$(BUILDDIR)/test_igmp: test_igmp.c hw_mock.c env_tables.c $(SRCROOT)/rtl837x_port.c $(SRCROOT)/rtl837x_igmp.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $(filter %.c,$^) -o $@ $(LDFLAGS)
 
 # httpd/httpd.c and uip/uip.c are compiled UNMODIFIED from the firmware tree;
