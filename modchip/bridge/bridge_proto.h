@@ -2,7 +2,7 @@
 #define _BRIDGE_PROTO_H_
 
 /*
- * Bridge link protocol, version 1. Specified in modchip/ARCHITECTURE.md.
+ * Bridge link protocol, version 1. Specified in modchip/bridge/README.md.
  *
  * Every message is  type, seq, payload..., CRC-16 (little endian)  encoded
  * with COBS and ended by a 0x00 byte. The CRC is CRC-16/MODBUS (reflected

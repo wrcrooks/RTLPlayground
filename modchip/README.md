@@ -1,23 +1,8 @@
 # Mod chip
 
-An RP2350 board inside SWTG024AS-V2.0 switches that takes over management from the RTL8372's 8051.
-The design, the link protocol, the pinouts and the mechanical constraints are in
-[ARCHITECTURE.md](ARCHITECTURE.md). Nothing here has run on hardware yet.
+The mod chip is an RP2350 board that takes over the switch's management plane. It lives in its own
+repository, [wrcrooks/rtlplayground-modchip](https://github.com/wrcrooks/rtlplayground-modchip), which
+has the hardware, the RP2350-side tools and the design document.
 
-| Path | What |
-|---|---|
-| `pico/read_chip_id.py` | MicroPython: reads the chip ID and link state over header T3 (I²C 0x5C). Read-only |
-| `pico/bridge_link.py` | MicroPython/CPython: the host side of the bridge protocol |
-| `pico/bridge_host_test.py` | MicroPython: talks to the bridge firmware over header T5 |
-| `bridge/` | The minimal 8051 firmware: init, SerDes/SFP upkeep, frame tunnel, SFR-only operations |
-| `hardware/` | KiCad 10 schematic and board, the outline reaching T3, T8 and T5, a DXF and a 1:1 print template, and the scripts that generate and check them |
-
-Build the bridge firmware from the repository root:
-
-```
-make -f modchip/bridge/Makefile MACHINE=SWGT024_V2_0_UNMANAGED LAYOUT=compact
-```
-
-Tests: `make -C test` runs `test_bridge_link` (the 8051 framing code, compiled unchanged) and
-`test_bridge_link.py` (the Python host side against it). `modchip/bridge/check_hal.py` checks that the
-helpers copied from `rtlplayground.c` haven't drifted.
+This repository keeps only the 8051 side, the bridge firmware in [`bridge/`](bridge/README.md), because
+it shares RTLPlayground's chip-level modules.
