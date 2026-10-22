@@ -14,6 +14,7 @@
 #include "rtl837x_sfr.h"
 #include "rtl837x_regs.h"
 #include "rtl837x_igmp.h"
+#include "rtl837x_port.h"
 #include "machine.h"
 
 extern __code const struct machine machine;
@@ -36,8 +37,17 @@ __xdata uint16_t idx;
 #define IGMP_GROUP_OFS		4
 #define IGMP_V3_RECORD_OFS	8
 
-static __xdata uint8_t igmp_grp;
+static __xdata uint16_t igmp_grp;	/* byte offset into uip_buf, can exceed 255 */
 static __xdata uint8_t igmp_join;
+
+/* Router ports: static ones, plus the seconds left for each port that sent a
+ * query or a routing protocol message */
+__xdata uint16_t igmp_rport_static;
+static __xdata uint8_t igmp_rport_age[16];
+
+#define IGMP_ALL_PORTS		0xffff
+#define IGMP_STP_FORWARDING	0x3	/* 2-bit state in RTL837X_MSTP_STATES */
+#define IGMP_MIN_FRAME		68	/* 60-byte minimum Ethernet frame plus CPU tag */
 
 #ifdef IPMC_USES_L3MC
 struct ipmc_table_entry {
@@ -91,10 +101,40 @@ struct igmp_pkt {
 #define IGMP_I ((__xdata struct igmp_pkt *)&uip_buf[0])
 
 
+/* Once at boot: xdata is not zeroed by the startup code */
+void igmp_init(void) __banked
+{
+	igmp_rport_static = 0;
+	memset(igmp_rport_age, 0, sizeof(igmp_rport_age));
+}
+
+
+/* Once a second: a port stops being a router port when its queries stop */
+void igmp_tick(void) __banked
+{
+	for (uint8_t i = 0; i < sizeof(igmp_rport_age); i++)
+		if (igmp_rport_age[i])
+			igmp_rport_age[i]--;
+}
+
+
+uint16_t igmp_router_ports(void) __banked
+{
+	uint16_t pmask = igmp_rport_static;
+
+	for (uint8_t i = 0; i < sizeof(igmp_rport_age); i++)
+		if (igmp_rport_age[i])
+			pmask |= ((uint16_t)1) << i;
+	return pmask;
+}
+
+
 void igmp_setup(void) __banked
 {
 	uint8_t i;
 	print_string("igmp_setup called\n");
+	// Router ports learned while snooping was on are stale once it is off
+	memset(igmp_rport_age, 0, sizeof(igmp_rport_age));
 	igmpEnabled = 0;
 	// For now, forward all unkown IP-MC pkts (2 bits per port. 00: flood via floodmask, 01: drop, 10: trap, 11: to rport)
 	REG_SET(RTL837X_IPV4_PORT_MC_LM_ACT, LOOKUP_MISS_FLOOD);
@@ -186,6 +226,8 @@ void igmp_show(void) __banked
 		print_sfr_data();
 		write_char('\n');
 	}
+	print_string("router ports: static "); print_short(igmp_rport_static);
+	print_string(", all "); print_short(igmp_router_ports()); write_char('\n');
 	// TODO: print all L3MC entries in the table
 }
 
@@ -208,51 +250,15 @@ void entry_to_l2mc(void)
 #endif
 
 
-uint8_t igmp_packet_handler(void) __banked
+/*
+ * Add or remove the ingress port for one multicast group in the ASIC
+ * tables. The group address is at uip_buf[igmp_grp] and igmp_join says
+ * whether the port is joining or leaving.
+ */
+static void igmp_apply_group(void)
 {
-	if (IGMP_I->ipv4_tag != HTONS(UIP_ETHTYPE_IP) || IGMP_I->protocol != IGMP_PROTO)
-		return 0;
-	// By default we do not send anything out
-	uip_len = 0;
-
-#ifdef DEBUG
-	print_string("\nIPv4 MC packet:\n");
-	for (uint8_t i = 0; i < 80; i++) {
-		print_byte(uip_buf[i]);
-		write_char(' ');
-	}
-	write_char('\n');
-#endif
-	igmp_grp = IGMP_IP_HDR + ((IGMP_I->hlen & IGMP_IP_IHL) << 2);
-#ifdef DEBUG
-	print_string("Found IGMP, type: "); print_byte(uip_buf[igmp_grp]); write_char('\n');
-#endif
-	switch (uip_buf[igmp_grp]) {
-	case IGMP_V1_REPORT:
-	case IGMP_V2_REPORT:
-		igmp_join = 1;
-		break;
-	case IGMP_V2_LEAVE:
-		igmp_join = 0;
-		break;
-	case IGMP_V3_REPORT:
-		igmp_grp += IGMP_V3_RECORD_OFS;
-		if (uip_buf[igmp_grp] == IGMP_V3_TO_EXCLUDE)
-			igmp_join = 1;
-		else if (uip_buf[igmp_grp] == IGMP_V3_TO_INCLUDE)
-			igmp_join = 0;
-		else
-			return 1;
-		break;
-	default:
-		return 1;
-	}
-	igmp_grp += IGMP_GROUP_OFS;
-#ifdef DEBUG
-	print_string("IGMP join "); print_byte(igmp_join); write_char('\n');
-#endif
 	if (uip_buf[igmp_grp] == IGMP_LOCAL_NET_0 && !uip_buf[igmp_grp + 1] && !uip_buf[igmp_grp + 2])
-		return 1;
+		return;
 
 #ifdef IPMC_USES_L3MC
 	memset((__xdata uint8_t *)&entry, 0, sizeof(struct ipmc_table_entry));
@@ -346,9 +352,9 @@ uint8_t igmp_packet_handler(void) __banked
 //			print_string("\nPort-Mask: "); print_short(entry.pmask); write_char('\n');
 		} else {
 			print_string("IGMP Entry already deleted\n");
-			return 1;
+			return;
 		}
-		if (!entry.pmask && idx) { // No more ports in that group and an actual entry?
+		if (!entry.pmask) { // No more ports in the group; the entry (idx, valid at 0) goes
 			// Delete Entry
 			reg_read_m(RTL837x_TBL_DATA_0);
 			sfr_data[1] |= 0x04;	// Clear entry
@@ -358,12 +364,12 @@ uint8_t igmp_packet_handler(void) __banked
 				reg_read_m(RTL837X_TBL_CTRL);
 			} while (sfr_data[3] & 0x1);
 			print_string("IGMP Entry deleted\n");
-			return 1;
+			return;
 		}
 	}
 
 	if (!entry.pmask)
-		return 1;
+		return;
 	print_string("Updating IGMP entry\n");
 	// Write the updated entry
 #ifdef IPMC_USES_L3MC
@@ -400,5 +406,154 @@ uint8_t igmp_packet_handler(void) __banked
 	reg_read_m(RTL837x_TBL_DATA_0);
 	print_sfr_data();
 #endif
+	return;
+}
+
+
+/*
+ * Pass the trapped IGMP frame on to the ports in targets, as far as the
+ * switch would forward it itself: not back to where it came from or into the
+ * same LAG, only within the VLAN of the ingress port, not to ports isolated
+ * from it, and only to ports in STP forwarding state. A frame from the CPU
+ * port carries its own port mask, which bypasses the ASIC's checks. Every
+ * member of another LAG gets a copy: picking one could pick a link that is
+ * down, and a duplicate IGMP message changes nothing.
+ * Sets uip_len for the caller to transmit, or leaves it 0.
+ */
+static void igmp_relay(uint8_t in_port, uint16_t targets, uint16_t frame_len)
+{
+	__xdata uint16_t vmask, iso, mask, in_lag, out_len, i;
+	__xdata uint8_t stp[4], p, lag;
+	__xdata struct rtl_tag *tag;
+
+	// A trapped frame is untagged, so it belongs to the ingress port's PVID
+	if (vlan_get(port_pvid_get(in_port)) < 0)
+		return;
+	vmask = ((uint16_t)(sfr_data[2] & 0x03) << 8) | sfr_data[3];
+	iso = port_isolation_get(in_port);
+	reg_read_m(RTL837X_MSTP_STATES);
+	stp[0] = sfr_data[0]; stp[1] = sfr_data[1]; stp[2] = sfr_data[2]; stp[3] = sfr_data[3];
+	lag = port_lag_of(in_port);
+	in_lag = lag == PORT_LAG_NONE ? ((uint16_t)1) << in_port : port_lag_members_get(lag);
+
+	mask = 0;
+	targets &= vmask & iso & ~in_lag;
+	for (p = machine.min_port; p <= machine.max_port; p++) {
+		if (!((targets >> p) & 1))
+			continue;
+		if (((stp[3 - (p >> 2)] >> ((p << 1) & 0x7)) & 0x3) != IGMP_STP_FORWARDING)
+			continue;
+		mask |= ((uint16_t)1) << p;
+	}
+	if (!mask)
+		return;
+
+	// Up to the end of the IP packet: anything after it is not ours to copy
+	out_len = IGMP_IP_HDR + NTOHS(IGMP_I->len);
+	if (out_len > frame_len)
+		out_len = frame_len;
+	if (out_len > sizeof(uip_buf) - RTL_FRAME_DESC_SIZE)
+		return;
+	// A frame to send sits behind the TX descriptor, a received one at 0
+	for (i = out_len; i--; )
+		uip_buf[RTL_FRAME_DESC_SIZE + i] = uip_buf[i];
+	for (i = out_len; i < IGMP_MIN_FRAME; i++)
+		uip_buf[RTL_FRAME_DESC_SIZE + i] = 0;
+	if (out_len < IGMP_MIN_FRAME)
+		out_len = IGMP_MIN_FRAME;
+
+	tag = (__xdata struct rtl_tag *)&uip_buf[RTL_FRAME_DESC_SIZE + 12];
+	tag->tag = HTONS(RTL_FRAME_TAG_ID);
+	tag->version = RTL_FRAME_TAG_VERSION;
+	tag->reason = 0;
+	tag->flags = HTONS(RTL_TAG_LEARN_DIS);
+	tag->pmask = HTONS(mask);
+	uip_len = out_len;
+}
+
+
+uint8_t igmp_packet_handler(void) __banked
+{
+	__xdata uint16_t frame_len, rec, rec_end, nrec;
+	__xdata uint8_t rtype, in_port;
+
+	if (IGMP_I->ipv4_tag != HTONS(UIP_ETHTYPE_IP) || IGMP_I->protocol != IGMP_PROTO)
+		return 0;
+	// Length as received, before uip_len is cleared; bounds the record walk
+	frame_len = uip_len;
+	if (frame_len > sizeof(uip_buf))
+		frame_len = sizeof(uip_buf);
+	// Nothing goes out unless igmp_relay() passes the frame on
+	uip_len = 0;
+	in_port = (IGMP_I->rtl_tag.pmask >> 8) & 0x0f;
+
+	igmp_grp = IGMP_IP_HDR + ((IGMP_I->hlen & IGMP_IP_IHL) << 2);
+	if ((uint16_t)igmp_grp + IGMP_GROUP_OFS + 4 > frame_len)
+		return 1;
+
+	/* RFC 4541: queries go to every port, membership reports and leaves
+	 * only to the ports with a multicast router, and an IGMP message the
+	 * switch does not know is flooded. */
+	switch (uip_buf[igmp_grp]) {
+	case IGMP_V1_REPORT:
+	case IGMP_V2_REPORT:
+		igmp_join = 1;
+		igmp_grp += IGMP_GROUP_OFS;
+		igmp_apply_group();
+		break;
+	case IGMP_V2_LEAVE:
+		igmp_join = 0;
+		igmp_grp += IGMP_GROUP_OFS;
+		igmp_apply_group();
+		break;
+	case IGMP_V3_REPORT:
+		/* v3 report header: type, reserved, checksum, reserved, and a
+		 * 16-bit record count; the group records follow it. Every record
+		 * is handled, not just the first, so a report that answers a
+		 * general query re-joins all of its groups. */
+		if ((uint16_t)igmp_grp + IGMP_V3_RECORD_OFS > frame_len)
+			break;
+		nrec = ((uint16_t)uip_buf[igmp_grp + 6] << 8) | uip_buf[igmp_grp + 7];
+		rec = (uint16_t)igmp_grp + IGMP_V3_RECORD_OFS;
+		while (nrec-- && rec + 8 <= frame_len) {
+			rtype = uip_buf[rec];
+			/* record: type, aux-data length, source count, group
+			 * address, then the sources and aux data, each counted
+			 * in 32-bit words */
+			rec_end = rec + 8
+				+ ((((uint16_t)uip_buf[rec + 2] << 8 | uip_buf[rec + 3])) << 2)
+				+ ((uint16_t)uip_buf[rec + 1] << 2);
+			if (rec_end > frame_len || rec_end <= rec)
+				break;
+			/* A host reports each joined group as MODE_IS_EXCLUDE, so an
+			 * exclude is a join. An include with no sources is a leave;
+			 * with sources the group is still wanted. Source-specific
+			 * blocks need per-source state we do not keep, so they and
+			 * any unknown type are left alone. */
+			if ((rtype == IGMP_V3_MODE_IS_INCLUDE || rtype == IGMP_V3_TO_INCLUDE)
+			    && !uip_buf[rec + 2] && !uip_buf[rec + 3]) {
+				igmp_join = 0;
+			} else if (rtype < IGMP_V3_MODE_IS_INCLUDE || rtype > IGMP_V3_ALLOW_NEW) {
+				rec = rec_end;
+				continue;
+			} else {
+				igmp_join = 1;
+			}
+			igmp_grp = rec + IGMP_GROUP_OFS;
+			igmp_apply_group();
+			rec = rec_end;
+		}
+		break;
+	case IGMP_QUERY:
+	case IGMP_DVMRP:
+	case IGMP_PIM_V1:
+		// A multicast router sits behind this port
+		igmp_rport_age[in_port] = IGMP_RPORT_AGE;
+		/* fall through */
+	default:
+		igmp_relay(in_port, IGMP_ALL_PORTS, frame_len);
+		return 1;
+	}
+	igmp_relay(in_port, igmp_router_ports(), frame_len);
 	return 1;
 }
