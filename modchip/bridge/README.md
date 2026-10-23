@@ -124,6 +124,7 @@ does lose a byte, the message is dropped and counted in `link_errors`.
 | `0x26 SFP_READ` | `slot:1 offset:1 len:1` | `data` | `len` 1-16; bit 7 of `offset` selects A2h (diagnostics) |
 | `0x27 TBL_READ` | `ctrl:4 count:1` | per entry: `ctrl:4 out_a:4 out_b:4 out_c:4 data_0:4` | Runs `count` (1-64) table reads, from the entry in `ctrl` (`TBL_CTRL` as written, read command) onwards: `TBL_CTRL` after the read, `L2_DATA_OUT_A/B/C` and `TBL_DATA_0`. Saves the host a write, a poll and the reads per entry |
 | `0x28 SDS_CONFIG` | `sds:1 mode:1` | | `sds_config()`: SerDes `sds` (≤ 1) to `SDS_*` mode `mode` |
+| `0x29 STAT_READ` | `pmask:2 n:1 counter:n` | per port in `pmask`, ascending, per counter: `value:8` | MIB counters (`STAT_GET`), `n` 1-16, each the 64-bit value of `STAT_V_HIGH`:`STAT_V_LOW`. Saves the host four round trips per counter |
 | `0x30 FLASH_READ` | `addr:4 len:2` | `data` | `len` 1-512; `addr` 4-byte aligned |
 | `0x31 FLASH_ERASE` | `addr:4` | | One 4 KiB sector, at or above `upload_start` |
 | `0x32 FLASH_WRITE` | `addr:4 data` | | 1-256 bytes within one page, at or above `upload_start` |

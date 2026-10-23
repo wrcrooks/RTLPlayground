@@ -398,6 +398,39 @@ static void tbl_read(uint8_t seq, __xdata uint8_t *p)
 }
 
 
+/*
+ * MIB counters for the host: for each port in pmask (logical port numbers,
+ * ascending), each of the n counters as the 64-bit STAT_V_HIGH:STAT_V_LOW,
+ * 8 bytes little endian. One request where the host needs four round trips
+ * per counter. The high word is read first, as RTLPlayground reads them.
+ */
+static void stat_read(uint8_t seq, __xdata uint8_t *p, uint8_t n)
+{
+	__xdata uint16_t pmask = get16(p);
+	__xdata uint8_t port, i, hi[4];
+
+	if (!n || n > STAT_READ_MAX || !pmask || (pmask >> (machine.max_port + 1))) {
+		reply(REQ_STAT_READ, seq, ST_BAD_ARGUMENT);
+		return;
+	}
+	link_begin(REQ_STAT_READ | REPLY, seq);
+	link_put(ST_OK);
+	for (port = 0; port <= machine.max_port; port++) {
+		if (!(pmask & ((uint16_t)1 << port)))
+			continue;
+		for (i = 0; i < n; i++) {
+			STAT_GET(p[3 + i], port);
+			reg_read_m(RTL837X_STAT_V_HIGH);
+			hi[0] = sfr_data[3]; hi[1] = sfr_data[2]; hi[2] = sfr_data[1]; hi[3] = sfr_data[0];
+			reg_read_m(RTL837X_STAT_V_LOW);
+			reply_sfr_le();
+			link_put_buf(hi, 4);
+		}
+	}
+	link_end();
+}
+
+
 /* Runs one of the flash module's ID dumps and replies with what it prints */
 static void flash_id(uint8_t seq, __xdata uint8_t *p)
 {
@@ -537,6 +570,12 @@ static void handle_request(uint16_t len)
 		if (n != 5)
 			break;
 		tbl_read(seq, p);
+		return;
+
+	case REQ_STAT_READ:
+		if (n < 3 || n != 3 + p[2])
+			break;
+		stat_read(seq, p, p[2]);
 		return;
 
 	case REQ_SDS_CONFIG:
