@@ -122,9 +122,12 @@ does lose a byte, the message is dropped and counted in `link_errors`.
 | `0x24 SDS_READ` | `sds:1 page:1 reg:1` | `value:2` | `sds` ≤ 1, `page` < 128 |
 | `0x25 SDS_WRITE` | `sds:1 page:1 reg:1 value:2` | | |
 | `0x26 SFP_READ` | `slot:1 offset:1 len:1` | `data` | `len` 1-16; bit 7 of `offset` selects A2h (diagnostics) |
+| `0x27 TBL_READ` | `ctrl:4 count:1` | per entry: `ctrl:4 out_a:4 out_b:4 out_c:4 data_0:4` | Runs `count` (1-64) table reads, from the entry in `ctrl` (`TBL_CTRL` as written, read command) onwards: `TBL_CTRL` after the read, `L2_DATA_OUT_A/B/C` and `TBL_DATA_0`. Saves the host a write, a poll and the reads per entry |
+| `0x28 SDS_CONFIG` | `sds:1 mode:1` | | `sds_config()`: SerDes `sds` (≤ 1) to `SDS_*` mode `mode` |
 | `0x30 FLASH_READ` | `addr:4 len:2` | `data` | `len` 1-512; `addr` 4-byte aligned |
 | `0x31 FLASH_ERASE` | `addr:4` | | One 4 KiB sector, at or above `upload_start` |
 | `0x32 FLASH_WRITE` | `addr:4 data` | | 1-256 bytes within one page, at or above `upload_start` |
+| `0x33 FLASH_ID` | `what:1 addr:4` | text | Runs `flash_read_jedecid()` (`'j'`), `flash_read_uid()` (`'u'`) or `flash_read_security()` on 40 bytes at `addr` (`'s'`) and returns what it prints, up to 128 bytes |
 | `0x3E SET_LED` | `state:1` | | System LED: 0 off, 1 fast, 2 slow, 3 on |
 | `0x3F REBOOT` | | | Replies, then resets the chip |
 
