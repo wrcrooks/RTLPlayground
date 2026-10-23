@@ -2087,6 +2087,12 @@ void cmd_parser(void) __banked
 				trap_rma_set(RTL837X_RMA0E_CONF, RTL837X_RMA_ACT_FORWARD);
 			}
 		}
+#ifdef CMD_PARSER_EXT
+		/* Commands of a port that embeds this parser (the mod chip's
+		 * RP2350 firmware): true if it took the command */
+		else if (CMD_PARSER_EXT())
+			;
+#endif
 		else {
 			cmd_error("Unknown command\n");
 		}
