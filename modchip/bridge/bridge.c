@@ -106,6 +106,7 @@ __xdata uint8_t link_seq;
 #define LOG_SIZE 128
 __xdata uint8_t log_buf[LOG_SIZE];
 __xdata uint8_t log_len;
+__bit log_capture;	/* collect printed text for a reply instead of sending it */
 
 __bit host_present;
 __xdata uint8_t host_idle_s;
@@ -209,7 +210,7 @@ void write_char(char c)
 		return;
 	if (log_len < LOG_SIZE)
 		log_buf[log_len++] = c;
-	if ((c == '\n' || log_len == LOG_SIZE) && !link_busy)
+	if ((c == '\n' || log_len == LOG_SIZE) && !link_busy && !log_capture)
 		log_flush();
 }
 
@@ -285,6 +286,13 @@ static void reply_sfr32(uint8_t type, uint8_t seq)
 }
 
 
+/* sfr_data into the open message, low byte first */
+static void reply_sfr_le(void)
+{
+	link_put(sfr_data[3]); link_put(sfr_data[2]); link_put(sfr_data[1]); link_put(sfr_data[0]);
+}
+
+
 /* PHY and SerDes reads leave a 16-bit result in SFR A6/A7 */
 static void reply_sfr16(uint8_t type, uint8_t seq)
 {
@@ -348,6 +356,68 @@ static void flash_writes(bool on)
 {
 	// Erasing and programming need the flash in single-IO mode
 	flash_init(on ? 0 : (machine.flash_sio ? 0 : 1));
+}
+
+
+/*
+ * Table reads for the host, count entries from the one in ctrl: one request
+ * where a host walking the VLAN or L2 table needs three per entry (write the
+ * command, poll, read the result). Reads only: a write command or a count
+ * of 0 is refused. Each entry returns what the host reads afterwards.
+ */
+static void tbl_read(uint8_t seq, __xdata uint8_t *p)
+{
+	__xdata uint16_t entry = get16(p + 2);
+	__xdata uint8_t count = p[4];
+	__xdata uint16_t tries;
+
+	if ((p[0] & (TBL_WRITE | TBL_EXECUTE)) != TBL_EXECUTE || !count || count > TBL_READ_MAX) {
+		reply(REQ_TBL_READ, seq, ST_BAD_ARGUMENT);
+		return;
+	}
+	link_begin(REQ_TBL_READ | REPLY, seq);
+	link_put(ST_OK);
+	while (count--) {
+		REG_WRITE(RTL837X_TBL_CTRL, entry >> 8, entry, p[1], p[0]);
+		tries = 1000;
+		do {
+			reg_read_m(RTL837X_TBL_CTRL);
+		} while ((sfr_data[3] & TBL_EXECUTE) && --tries);
+		reply_sfr_le();
+		reg_read_m(RTL837x_L2_DATA_OUT_A);
+		reply_sfr_le();
+		reg_read_m(RTL837x_L2_DATA_OUT_B);
+		reply_sfr_le();
+		reg_read_m(RTL837x_L2_DATA_OUT_C);
+		reply_sfr_le();
+		reg_read_m(RTL837x_TBL_DATA_0);
+		reply_sfr_le();
+		entry++;
+	}
+	link_end();
+}
+
+
+/* Runs one of the flash module's ID dumps and replies with what it prints */
+static void flash_id(uint8_t seq, __xdata uint8_t *p)
+{
+	log_flush();
+	log_capture = 1;
+	if (p[0] == 'j') {
+		flash_read_jedecid();
+	} else if (p[0] == 'u') {
+		flash_read_uid();
+	} else {
+		flash_region.addr = get32(p + 1);
+		flash_region.len = 40;
+		flash_read_security();
+	}
+	log_capture = 0;
+	link_begin(REQ_FLASH_ID | REPLY, seq);
+	link_put(ST_OK);
+	link_put_buf(log_buf, log_len);
+	link_end();
+	log_len = 0;
 }
 
 
@@ -461,6 +531,33 @@ static void handle_request(uint16_t len)
 		link_put(ST_OK);
 		link_put_buf(sfp_buf, p[2]);
 		link_end();
+		return;
+
+	case REQ_TBL_READ:
+		if (n != 5)
+			break;
+		tbl_read(seq, p);
+		return;
+
+	case REQ_SDS_CONFIG:
+		if (n != 2)
+			break;
+		if (p[0] > 1) {
+			reply(type, seq, ST_BAD_ARGUMENT);
+			return;
+		}
+		sds_config(p[0], p[1]);
+		reply(type, seq, ST_OK);
+		return;
+
+	case REQ_FLASH_ID:
+		if (n != 5)
+			break;
+		if (p[0] != 'j' && p[0] != 'u' && p[0] != 's') {
+			reply(type, seq, ST_BAD_ARGUMENT);
+			return;
+		}
+		flash_id(seq, p);
 		return;
 
 	case REQ_FLASH_READ:
