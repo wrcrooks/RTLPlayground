@@ -29,6 +29,7 @@
 #define REQ_SFP_READ		0x26	/* slot:1 offset:1 len:1 (1-16) -> data */
 #define REQ_TBL_READ		0x27	/* ctrl:4 count:1 (1-64) -> count x (ctrl:4 out_a:4 out_b:4 out_c:4 data_0:4) */
 #define REQ_SDS_CONFIG		0x28	/* sds:1 mode:1, as sds_config() */
+#define REQ_STAT_READ		0x29	/* pmask:2 n:1 (1-16) counter:n -> per port, per counter: value:8 */
 #define REQ_FLASH_READ		0x30	/* addr:4 len:2 (1-512) -> data */
 #define REQ_FLASH_ERASE		0x31	/* addr:4, one 4 KiB sector */
 #define REQ_FLASH_WRITE		0x32	/* addr:4 data (1-256 bytes) */
@@ -37,6 +38,7 @@
 #define REQ_REBOOT		0x3f	/* replies, then resets the chip */
 
 #define TBL_READ_MAX		64
+#define STAT_READ_MAX		16
 
 #define REPLY			0x80
 
