@@ -83,7 +83,7 @@ $(BUILDDIR)/%.rel: %.asm | $(BUILDDIR)
 	$(ASM) $(AFLAGS) -o $@ $<
 
 $(BUILDDIR)/bridge.ihx: $(OBJS) $(BUILDDIR)/crtbank.rel $(BUILDDIR)/crc16.rel
-	$(CC) $(CC_FLAGS) --xram-size 49151 -Wl-bHOME=0x00000 -Wl-bBANK1=0x14000 -Wl-bBANK2=0x24000 -Wl-bBANK3=0x34000 -Wl-r -o $@ $^
+	$(CC) $(CC_FLAGS) --xram-size 49151 -Wl-bBSEG=0x08 -Wl-bHOME=0x00000 -Wl-bBANK1=0x14000 -Wl-bBANK2=0x24000 -Wl-bBANK3=0x34000 -Wl-r -o $@ $^
 
 $(BUILDDIR)/bridge.img: $(BUILDDIR)/bridge.ihx
 	objcopy --input-target=ihex -O binary $< $@
