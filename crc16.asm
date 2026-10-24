@@ -20,7 +20,10 @@ _crc_value::
 	.area HOME    (CODE)
 	.area CSEG    (CODE)
 ;	.area BANK1   (CODE)
+; The tables are in BANK1: map it for the lookups, then give the caller its
+; bank back, which a caller in BANK2 or BANK3 would otherwise lose
 _crc16_bank1:
+	push	BANK
 	mov	BANK, #1
 	push	dph
 	push	dpl
@@ -50,6 +53,7 @@ _crc16_bank1:
 	pop	dpl
 	pop	dph
 ;	clr	DPS
+	pop	BANK
 	ret
 
 	.area BANK1   (CODE)
