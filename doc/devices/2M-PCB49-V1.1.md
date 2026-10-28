@@ -89,7 +89,8 @@ configure PoE.
   - 17, 18: GND.
   - 8: 3V3. Reads about 1.2 V in diode mode.
   - 1-6: signals. Each reads about 1.6 V in diode mode, which is about 0.4 V above the 3V3 rail:
-    the ESD diode of a 3.3 V chip pin.
+    the ESD diode of a 3.3 V chip pin. 1, 3 and 5 read a few tens of kΩ to 3V3: weak pull-ups,
+    or a path through the unpowered chips. 2, 4 and 6 gave no reading.
   - 7, 9-16, 19, 20: nothing in diode mode, probably not connected on the main board.
   - None of them connects to `J1` (V+), so the PoE supply reaches the daughterboard some other way.
 - **The stock firmware manages PoE.** Its web UI has a PoE power consumption readout and a "PSE
