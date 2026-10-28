@@ -29,8 +29,20 @@ Flash: a Winbond W25Q16JVSIQ, 2 MiB, so the standard layout applies (web updates
 `LAYOUT=compact`), and the default dual-I/O flash reads should work (`flash_sio` stays 0). For a
 backup with a CH341A, flashrom names the chip `W25Q16.V`.
 
-PoE: as on the other PoE boards (see [supported devices](../supported_devices.md)), the board powers
-the ports by itself and RTLPlayground doesn't configure PoE.
+### PoE
+
+As on the other PoE boards (see [supported devices](../supported_devices.md)), RTLPlayground doesn't
+configure PoE. Not yet checked on this board, but likely from its relatives:
+
+- **Controller:** the MokerLink POE-2G080110GS ([2M-PCB51-ML-V1.1](2M-PCB51-ML-V1_1.md)) uses an
+  RTL8238C, and the [Hasivo S1100P](Hasivo-S1100P-8GT-1SX-S.md) an RTL8238B managed by a separate
+  STC8H8K64U microcontroller.
+- **Protocol:** RTL8238-based PoE is driven through such a microcontroller over a UART, 115200 8N1,
+  12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the Broadcom PoE
+  protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
+- **Check before trusting the SFP pins:** if the stock firmware has PoE settings, the RTL8372 talks
+  to that microcontroller, most likely on UART1 (GPIO50 TX, GPIO51 RX). The target copied from the
+  2M-PCB43-V1.1 uses GPIO50 as the left SFP's module detect, which would then be wrong.
 
 ### Headers
 
@@ -66,7 +78,8 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 - Photos of the front, label and both sides of the PCB.
 - A backup of the stock firmware (SPI clip, switch unpowered), before anything else is flashed.
 - The RTL chip's marking, to confirm the RTL8372.
-- The PoE controller(s) and whether they hang off an I²C bus of the RTL8372.
+- The PoE controller and its microcontroller, and whether that one is wired to the RTL8372's UART1
+  (GPIO50/51) or an I²C bus. Whether the stock web UI has PoE settings.
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
 - SFP pins (module detect, LOS, I²C), the reset button and the LED wiring. These can be read from
   the stock firmware's pin-mux, GPIO and LED registers over `T7` while it runs.
@@ -75,4 +88,6 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 ## Power supply
 
 To be documented: the supply's voltage and current, and the connector. The 2G040210GSM runs from
-12 V, 1 A; PoE needs more than that.
+12 V, 1 A; PoE needs more than that. The POE-2G080110GS has its supply inside and runs from mains:
+if this one does too, the caution in its [doc](2M-PCB51-ML-V1_1.md) applies, and the board must be
+unplugged, with its capacitors discharged, before probing.
