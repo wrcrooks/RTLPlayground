@@ -138,9 +138,9 @@ configure PoE.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
   Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
-- **Under RTLPlayground, PoE may stay off.** RTLPlayground sends the RTL8238B nothing. Whether the
-  ports still supply power then depends on what the RTL8238B does by itself after power-up, which
-  isn't known. Check it before relying on PoE with RTLPlayground.
+- **Under RTLPlayground, PoE is off.** RTLPlayground sends the RTL8238B nothing, and the chip
+  doesn't power ports by itself: with a PoE-powered device on port 1, the port stayed without
+  link and no register of `0x20` or `0x21` changed from the dump taken with nothing connected.
 
 ### SFP
 
