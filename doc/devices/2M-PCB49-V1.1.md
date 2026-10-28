@@ -48,7 +48,9 @@ Tested on one switch, flashed with a CH341A clip:
   found to show that the button is held.
 - Firmware updates through the web UI work; they leave the MAC sector alone.
 
-Not known yet: the SFP pins, and whether PoE works (see [PoE](#poe)).
+- SFP modules are detected in both cages, and their EEPROMs are read (see [SFP](#sfp)).
+
+Not known yet: SFP links, and whether PoE works (see [PoE](#poe)).
 
 ### PCB overview
 
@@ -128,9 +130,23 @@ configure PoE.
 - **Under RTLPlayground, PoE may stay off.** RTLPlayground sends the RTL8238B nothing. Whether the
   ports still supply power then depends on what the RTL8238B does by itself after power-up, which
   isn't known. Check it before relying on PoE with RTLPlayground.
-- **The left SFP's pins are suspect.** The target copied from the 2M-PCB43-V1.1 uses GPIO50 as the
-  left SFP's module detect. If GPIO50/51 go to `U16` here (as UART1 or I²C bus 2), the left SFP's detect (and maybe LOS)
-  must be on other pins, and the target is wrong.
+
+### SFP
+
+Found by moving a module (an Intel AFBR-709DMZ, 10G SR) between the cages while polling the GPIO
+inputs and reading the EEPROM from each cage's configured bus:
+
+| | Port 5 (left) | Port 6 (right) |
+| --- | --- | --- |
+| Module detect (low = module in) | GPIO38 | GPIO37 |
+| EEPROM I²C SDA | GPIO39 | GPIO41 |
+| EEPROM I²C SCL | GPIO40 | GPIO40 |
+| LOS | not found | not found |
+
+Both cages differ from the 2M-PCB43-V1.1 (detect GPIO50 / GPIO30, and the two SDA lines the other
+way round). No GPIO input changed with the LOS of a module without fibre, so LOS may not be wired
+to a GPIO. Which SerDes serves which cage is still the 2M-PCB43-V1.1's guess, untested without a
+link.
 
 ### LEDs
 
@@ -195,7 +211,7 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 - Whether the ports supply PoE when the RTL8238B gets no commands (under RTLPlayground).
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
 - 2.5G links and the green LEDs, the port 6 and system LEDs.
-- SFP pins (module detect, LOS, I²C). These can be read from
+- SFP links: the SerDes mapping, and LOS. These can be read from
   the stock firmware's pin-mux, GPIO and LED registers over `T7` while it runs.
 - What `T3` is: a 2-pin header with pin 1 on GND, next to the crystal `Y1`, so perhaps a button or
   jumper input (the reset button?).
