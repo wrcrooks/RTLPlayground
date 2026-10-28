@@ -44,8 +44,8 @@ Tested on one switch, flashed with a CH341A clip:
 
 - The reset button is on GPIO48, low while pressed (as on the 2M-PCB23-V3.1). A short press does
   nothing, and holding it for more than 3 s restarts the switch (both tested). Held more than
-  10 s, it also restores the default settings (not tested). The board has no system LED to show
-  that the button is held.
+  10 s, it also restores the default settings (not tested). No system LED has been
+  found to show that the button is held.
 - Firmware updates through the web UI work; they leave the MAC sector alone.
 
 Not known yet: the SFP pins, and whether PoE works (see [PoE](#poe)).
