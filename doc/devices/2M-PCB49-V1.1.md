@@ -42,7 +42,11 @@ Tested on one switch, flashed with a CH341A clip:
   sector when flashing a full image with a clip: an image padded with `0xFF` erases it, and the
   switch then makes up a locally administered MAC.
 
-Not known yet: the SFP pins, the reset button, and whether PoE works (see [PoE](#poe)).
+- The reset button is on GPIO48, low while pressed (as on the 2M-PCB23-V3.1). RTLPlayground's
+  usual handling applies: held more than 3 s it restarts the switch, more than 10 s it also
+  restores the default settings.
+
+Not known yet: the SFP pins, and whether PoE works (see [PoE](#poe)).
 
 ### PCB overview
 
@@ -189,7 +193,7 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 - Whether the ports supply PoE when the RTL8238B gets no commands (under RTLPlayground).
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
 - 2.5G links and the green LEDs, the port 6 and system LEDs.
-- SFP pins (module detect, LOS, I²C) and the reset button. These can be read from
+- SFP pins (module detect, LOS, I²C). These can be read from
   the stock firmware's pin-mux, GPIO and LED registers over `T7` while it runs.
 - What `T3` is: a 2-pin header with pin 1 on GND, next to the crystal `Y1`, so perhaps a button or
   jumper input (the reset button?).

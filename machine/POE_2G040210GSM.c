@@ -6,7 +6,7 @@
  * Copied from the non-PoE 2G040210GSM (2M-PCB43-V1.1, KP_9000_6XHML_X2_V1_1),
  * which uses the same RTL8372 4+2 design. Checked on this board: boots, the four
  * RJ45 ports map to the front panel, and the LEDs below. Still to be
- * confirmed: the SFP pins and the reset button. See doc/devices/2M-PCB49-V1.1.md
+ * confirmed: the SFP pins. See doc/devices/2M-PCB49-V1.1.md
  * for what is known and what is open.
  * PoE is handled by the board itself and isn't configured here.
  */
@@ -33,8 +33,8 @@ __code const struct machine machine = {
 	.sfp_port[1].pin_tx_disable = GPIO_NA,
 	.sfp_port[1].sds = 1,
 	.sfp_port[1].i2c = I2CBUS( GPIO39_I2C_SDA4, GPIO40_I2C_SCL3_MDC1 ),
-	// Not known whether this board has a reset button, nor on which pin
-	.reset_pin = GPIO_NA,
+	// Reset button: GPIO48, low while pressed (seen on this board)
+	.reset_pin = GPIO48_I2C_SCL1,
 	.high_leds = { .mux = LED_27 | LED_29, .enable = LED_28_SYS | LED_29 },
 	// RJ45 ports use set 0, the SFP ports set 1
 	.port_led_set = { 0, 0, 0, 1, 0, 0, 0, 0, 1},
