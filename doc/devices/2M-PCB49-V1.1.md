@@ -85,7 +85,7 @@ configure PoE.
   [Hasivo S1100P](Hasivo-S1100P-8GT-1SX-S.md) also has an RTL8238B, managed there by a separate
   STC8H8K64U microcontroller. (The MokerLink POE-2G080110GS, [2M-PCB51-ML-V1.1](2M-PCB51-ML-V1_1.md),
   uses an RTL8238C.)
-- **`U16` pins** (continuity, switch unplugged): 9 and 19 are GND. The other pins haven't been
+- **`U16` pins** (continuity, switch unplugged): 17 and 18 are GND. The other pins haven't been
   checked yet.
 - **The stock firmware manages PoE.** Its web UI has a PoE power consumption readout and a "PSE
   Port Settings" page that turns PoE on and off per port and shows each port's type, power (W),
