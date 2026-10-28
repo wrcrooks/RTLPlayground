@@ -17,6 +17,7 @@
 #include "rtl837x_lacp.h"
 #include "page_impl.h"
 #include "syslog.h"
+#include "rtl8238.h"
 
 // #define DEBUG
 #include "debug.h"
@@ -318,8 +319,51 @@ void send_basic_info(void)
 		}
 	}
 	char_to_html('"');
+	if (machine.pse_rtl8238)
+		slen += strtox(outbuf + slen, ",\"poe\":1");
 
 	char_to_html('}');
+}
+
+
+static void short_hex_to_html(uint16_t v)
+{
+	char_to_html('"');
+	byte_to_html(v >> 8);
+	byte_to_html(v & 0xff);
+	char_to_html('"');
+}
+
+
+// PoE controller state and the raw per-port readings, see rtl8238.h
+void send_poe(void)
+{
+	slen = strtox(outbuf, HTTP_RESPONCE_JSON);
+	slen += strtox(outbuf + slen, "{\"loaded\":");
+	bool_to_html(pse_loaded);
+	slen += strtox(outbuf + slen, ",\"ports\":[");
+	if (machine.pse_rtl8238 && pse_loaded && pse_read_ports()) {
+		for (uint8_t i = 0; i < PSE_PORTS; i++) {
+			if (machine.pse_channel[i] > 3)
+				continue;
+			if (slen > 0 && outbuf[slen - 1] == '}')
+				char_to_html(',');
+			slen += strtox(outbuf + slen, "{\"portNum\":");
+			itoa_html(i + 1);
+			slen += strtox(outbuf + slen, ",\"det\":");
+			itoa_html(pse_ports[i].det);
+			slen += strtox(outbuf + slen, ",\"cls\":");
+			itoa_html(pse_ports[i].cls);
+			slen += strtox(outbuf + slen, ",\"on\":");
+			bool_to_html(pse_ports[i].on);
+			slen += strtox(outbuf + slen, ",\"i\":");
+			short_hex_to_html(pse_ports[i].i_raw);
+			slen += strtox(outbuf + slen, ",\"v\":");
+			short_hex_to_html(pse_ports[i].v_raw);
+			char_to_html('}');
+		}
+	}
+	slen += strtox(outbuf + slen, "]}");
 }
 
 

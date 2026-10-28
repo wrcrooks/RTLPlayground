@@ -112,6 +112,8 @@ struct machine {
 	// An RTL8238B PSE controller on I2C (GPIO46/47) whose image is loaded at
 	// boot, see rtl8238.c
 	uint8_t pse_rtl8238;
+	// Channel of the RTL8238B at 0x20 behind front ports 1-4, 0xff for none
+	uint8_t pse_channel[4];
 };
 
 struct machine_runtime

@@ -98,6 +98,12 @@ void     flash_read_bulk(uint8_t *dst) { (void)dst; }
 const char *get_flash_size_str(void) { return "2M"; }
 uint8_t  sfp_read_reg(uint8_t slot, uint8_t reg) { (void)slot; (void)reg; return 0; }
 bool     gpio_pin_test(uint8_t pin) { (void)pin; return false; }
+
+/* rtl8238.c: no PoE controller on the host */
+#include "rtl8238.h"
+__xdata struct pse_port pse_ports[PSE_PORTS];
+__xdata uint8_t pse_loaded;
+bool     pse_read_ports(void) { return false; }
 void     phy_read(uint8_t phy_id, uint8_t dev_id, uint16_t reg) { (void)phy_id; (void)dev_id; (void)reg; }
 void     phy_write(uint8_t phy_id, uint8_t dev_id, uint16_t reg, uint16_t val) { (void)phy_id; (void)dev_id; (void)reg; (void)val; }
 void     phy_reset(uint8_t port) { (void)port; }

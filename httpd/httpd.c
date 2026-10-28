@@ -1047,6 +1047,8 @@ void httpd_appcall(void)
 				send_isolation();
 			} else if (is_word(q, "/mtu.json")) {
 				send_mtu();
+			} else if (is_word(q, "/poe.json")) {
+				send_poe();
 			} else if (is_word(q, "/lag.json")) {
 				send_lag();
 			} else if (is_word(q, "/stp.json")) {

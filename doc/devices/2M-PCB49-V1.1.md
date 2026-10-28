@@ -170,6 +170,17 @@ configure PoE.
   config), so the region has to stay below that to be carried by one. Without it the
   boot log says "no RTL8238B image in this build" and PoE stays off. The console command `poe`
   reads the chip's status registers over the same I²C.
+- **Per-port readings** (from the stock firmware's PoE pages and its driver in bank 19; see
+  `rtl8238.h`). Front ports 1-4 are channels 3, 2, 1, 0 of `0x20` (the stock port tables at xdata
+  `0xabaa`/`0xabf3`); `0x21` serves no ports on this board.
+  - `0x0c + ch`: low nibble detection (4 = valid PoE device, 6 = open; a PC's NIC reads 1), high
+    nibble class (`0xc` = class 0, 1-8 = class 1-8).
+  - `0x10`, first byte: bit `4 + ch` = port powered.
+  - `0x30 + 4 * ch`: low 16 bits current, `raw * 125 / 4096` mA; high 16 bits `& 0x7fff`
+    voltage, `raw / 512` V. A small class 0 device on port 1 read 41 mA at 52 V.
+  - The web UI's PoE tab (shown when `information.json` has `"poe":1`) reads these through
+    `/poe.json` every 3 s and converts them. It is read-only: the stock per-port enable/disable
+    write isn't decoded yet, and the controller powers valid devices on its own.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
   Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).

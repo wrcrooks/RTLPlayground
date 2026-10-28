@@ -31,6 +31,9 @@
 #include "rtl837x_pins.h"
 #include "rtl837x_flash.h"
 #include "rtl8238.h"
+#include "machine.h"
+
+extern __code const struct machine machine;
 
 extern __xdata uint8_t sfr_data[4];
 extern __xdata struct flash_region_t flash_region;
@@ -53,6 +56,10 @@ static __xdata uint8_t pse_buf[4];
 // 0 = ok, 1 = device/register byte, 2-5 = data byte 1-4
 static __xdata uint8_t pse_fail;
 static __xdata uint32_t img_len[2];
+
+__xdata struct pse_port pse_ports[PSE_PORTS];
+// Set once an image load reports ok
+__xdata uint8_t pse_loaded;
 
 static void i2c_wait(void)
 {
@@ -355,8 +362,45 @@ void pse_load(void) __banked
 	delay(10);
 	pse_read(PSE_ADDR_0, 0xec);
 	print_string("PSE: status after load:"); pse_print_buf();
-	print_string(pse_buf[0] & 0x20 ? " - load ok\n" : " - load failed\n");
+	pse_loaded = pse_buf[0] & 0x20 ? 1 : 0;
+	print_string(pse_loaded ? " - load ok\n" : " - load failed\n");
 	delay(10);
+}
+
+bool pse_read_ports(void) __banked
+{
+	__xdata uint8_t i, ch;
+	__xdata uint8_t det[4];
+	__xdata uint8_t on;
+
+	i2c_setup();
+	if (!pse_read(PSE_ADDR_0, 0x0c))
+		return false;
+	for (i = 0; i < 4; i++)
+		det[i] = pse_buf[i];
+	if (!pse_read(PSE_ADDR_0, 0x10))
+		return false;
+	on = pse_buf[0];
+
+	for (i = 0; i < PSE_PORTS; i++) {
+		ch = machine.pse_channel[i];
+		if (ch > 3) {
+			pse_ports[i].det = 0;
+			pse_ports[i].cls = 0;
+			pse_ports[i].on = 0;
+			pse_ports[i].i_raw = 0;
+			pse_ports[i].v_raw = 0;
+			continue;
+		}
+		pse_ports[i].det = det[ch] & 0x0f;
+		pse_ports[i].cls = det[ch] >> 4;
+		pse_ports[i].on = (on >> (4 + ch)) & 1;
+		if (!pse_read(PSE_ADDR_0, 0x30 + (ch << 2)))
+			return false;
+		pse_ports[i].i_raw = pse_buf[0] | ((uint16_t)pse_buf[1] << 8);
+		pse_ports[i].v_raw = (pse_buf[2] | ((uint16_t)pse_buf[3] << 8)) & 0x7fff;
+	}
+	return true;
 }
 
 static void pse_status_dev(uint8_t dev)
