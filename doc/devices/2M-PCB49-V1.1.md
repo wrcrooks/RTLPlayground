@@ -1,7 +1,7 @@
 # MokerLink POE-2G040210GSM (2M-PCB49-V1.1)
 
-The PoE version of the MokerLink 2G040210GSM web-managed 4+2 switch. Work in progress: the machine
-target `POE_2G040210GSM` exists, but nothing has been tested on this board yet.
+The PoE version of the MokerLink 2G040210GSM web-managed 4+2 switch. Work in progress: RTLPlayground boots
+on it with the machine target `POE_2G040210GSM`, but most of the board is still to be checked.
 
 > [!CAUTION]
 > This switch has its power supply inside and runs from mains voltage, which can be a dangerous or
@@ -24,11 +24,23 @@ target `POE_2G040210GSM` exists, but nothing has been tested on this board yet.
 | --- | --- | --- |
 | PCB | `2M-PCB43-V1.1` | `2M-PCB49-V1.1` |
 | Target | `KP_9000_6XHML_X2_V1_1` | `POE_2G040210GSM` |
-| Status | supported ([doc](2M-PCB43-V1.1.md)) | not tested |
+| Status | supported ([doc](2M-PCB43-V1.1.md)) | boots, partly tested |
 
-`POE_2G040210GSM` starts as a copy of `KP_9000_6XHML_X2_V1_1`, as both are RTL8372 4+2 designs from
-the same vendor. Its header layout is closer to the [2M-PCB23-V3.1](2M-PCB23-V3_1.md)'s, though, so
-the port mapping, SFP pins, reset button and LEDs all still have to be confirmed on this board.
+`POE_2G040210GSM` started as a copy of `KP_9000_6XHML_X2_V1_1`, as both are RTL8372 4+2 designs
+from the same vendor. Its header layout is closer to the [2M-PCB23-V3.1](2M-PCB23-V3_1.md)'s, though.
+
+### What works
+
+Tested on one switch, flashed with a CH341A clip:
+
+- It boots and serves the web UI. Chip temperature and the 2 MB flash are detected.
+- Port 1 links at 1G and passes traffic, on the front's port 1. Ports 2-4 are not tested yet.
+- The RJ45 LEDs and the left SFP's LED, mapped on this board (see [LEDs](#leds)).
+- The MAC address is read from the stock firmware's copy at flash offset `0x1FC000`. Keep that
+  sector when flashing a full image with a clip: an image padded with `0xFF` erases it, and the
+  switch then makes up a locally administered MAC.
+
+Not known yet: the SFP pins, the reset button, and whether PoE works (see [PoE](#poe)).
 
 ### PCB overview
 
@@ -99,17 +111,41 @@ configure PoE.
   Port Settings" page that turns PoE on and off per port and shows each port's type, power (W),
   voltage (V) and current (mA). With no microcontroller on the daughterboard, that means the RTL8372
   itself talks to the RTL8238B through `U16`, in both directions (the readings come back from it).
-- **Protocol** (from the relatives, unconfirmed here): RTL8238-based PoE is usually driven over a
+- **I²C, going by the stock firmware.** Its strings include `PSE IC Type: RTL8238b` and
+  `address: 0x20 pse_init` / `address: 0x21 pse_init`, which point to the RTL8238B on an I²C bus at
+  `0x20` and `0x21` rather than a UART. `GPIO50`/`GPIO51` are also the RTL8372's I²C bus 2.
+- **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
-  Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)). The
-  RTL8372's UART1 is the likely link: GPIO50 (TX) and GPIO51 (RX). An I²C bus is the other
-  possibility.
+  Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
 - **Under RTLPlayground, PoE may stay off.** RTLPlayground sends the RTL8238B nothing. Whether the
   ports still supply power then depends on what the RTL8238B does by itself after power-up, which
   isn't known. Check it before relying on PoE with RTLPlayground.
 - **The left SFP's pins are suspect.** The target copied from the 2M-PCB43-V1.1 uses GPIO50 as the
-  left SFP's module detect. If GPIO50/51 go to `U16` here, the left SFP's detect (and maybe LOS)
+  left SFP's module detect. If GPIO50/51 go to `U16` here (as UART1 or I²C bus 2), the left SFP's detect (and maybe LOS)
   must be on other pins, and the target is wrong.
+
+### LEDs
+
+Each RJ45 port has a green and an amber LED, and the left SFP port a green one. The LED pads were
+found by routing pads to a lit source in turn, with `regset` on the LED mux registers
+(`0x65e0`-`0x65f4`) while RTLPlayground ran:
+
+| LED | Pad | | LED | Pad |
+| --- | --- | --- | --- | --- |
+| Port 1 amber | 9 | | Port 3 amber | 18 |
+| Port 1 green | 10 | | Port 3 green | 21 |
+| Port 2 amber | 12 | | Port 4 amber | 24 |
+| Port 2 green | 15 | | Port 4 green | 25 |
+| Port 5 (left SFP) | 26 | | | |
+
+None of pads 8-27 lit a port 6 (right SFP) LED or a system LED. Pads 0-7 aren't tested.
+
+The target lights the green LED for a 2.5G or 10G link and the amber LED for 1G, 100M or 10M, both
+blinking on activity. The SFP LED shows any link and activity. Whether that matches the stock
+firmware hasn't been compared.
+
+Pad 10 is also GPIO10, which the 2M-PCB43-V1.1 uses as its left SFP's LOS input, so this target
+doesn't use it for LOS.
 
 ### Headers
 
@@ -144,14 +180,14 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 ### Still open
 
 - Photos of the front and the label.
-- A backup of the stock firmware (SPI clip, switch unplugged), before anything else is flashed.
 - The RTL chip's marking, to confirm the RTL8372.
 - What `U16` carries: continuity from its pins to the RTL8372 side, above all to GPIO50/51
   (UART1) and the I²C buses. A logic analyser on the `U16` pins while the stock web UI changes a
   port's PoE setting would show the link and its protocol.
 - Whether the ports supply PoE when the RTL8238B gets no commands (under RTLPlayground).
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
-- SFP pins (module detect, LOS, I²C), the reset button and the LED wiring. These can be read from
+- Ports 2-4 mapping, the port 6 and system LEDs.
+- SFP pins (module detect, LOS, I²C) and the reset button. These can be read from
   the stock firmware's pin-mux, GPIO and LED registers over `T7` while it runs.
 - What `T3` is: a 2-pin header with pin 1 on GND, next to the crystal `Y1`, so perhaps a button or
   jumper input (the reset button?).
