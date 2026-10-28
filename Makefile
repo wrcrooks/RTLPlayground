@@ -3,9 +3,10 @@ IMAGESIZE = 524288
 DEFAULT_CONFIG_LOCATION = 454656
 CONFIG_LOCATION = 458752
 HTML_LOCATION = 262144
-# RTL8238B PSE image region (rtl8238.h PSE_IMAGE_START / PSE_IMAGE_MAX)
-PSE_IMAGE_LOCATION = 462848
-PSE_IMAGE_MAX = 57344
+# RTL8238B PSE image region (rtl8238.h PSE_IMAGE_START / PSE_IMAGE_MAX).
+# Above the last code bank and below HTML_LOCATION, so a web update carries it.
+PSE_IMAGE_LOCATION = 212992
+PSE_IMAGE_MAX = 49152
 
 # Startup configuration embedded in the image. Override it to build a specific
 # machine with its own configuration: make MACHINE=<name> CONFIG=<file>

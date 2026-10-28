@@ -14,7 +14,7 @@ file out of the repository.
 import struct
 import sys
 
-PSE_IMAGE_MAX = 0xE000  # rtl8238.h
+PSE_IMAGE_MAX = 0xC000  # rtl8238.h
 HDR_LEN = 12
 
 

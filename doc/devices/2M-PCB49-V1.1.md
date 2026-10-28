@@ -162,7 +162,9 @@ configure PoE.
   `make MACHINE=POE_2G040210GSM PSE_IMAGE=<file>`, where `<file>` is packed from your own copies
   of the image(s) with `tools/mkpseimage.py IMAGE0 IMAGE1 <file>` (image 1 is used when register
   `0xe8` reads 2, image 0 otherwise; `-` for one you don't have). The build places it at
-  `0x71000`-`0x7efff` in the firmware image (56 KiB), so web updates carry it. Without it the
+  `0x34000`-`0x3ffff` in the firmware image (48 KiB), between the last code bank and the web UI.
+  A web update rewrites `0x00000`-`0x6ffff` only (it stops at `CONFIG_START` to keep the saved
+  config), so the region has to stay below that to be carried by one. Without it the
   boot log says "no RTL8238B image in this build" and PoE stays off. The console command `poe`
   reads the chip's status registers over the same I²C.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
