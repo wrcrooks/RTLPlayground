@@ -36,7 +36,9 @@ __code const struct machine machine = {
 	.sfp_port[1].i2c = I2CBUS( GPIO41_I2C_SDA3_MDIO1, GPIO40_I2C_SCL3_MDC1 ),
 	// Reset button: GPIO48, low while pressed (seen on this board)
 	.reset_pin = GPIO48_I2C_SCL1,
-	.high_leds = { .mux = LED_27 | LED_29, .enable = LED_28_SYS | LED_29 },
+	// LED 28 lights the front's "S" LED, steadily: the system LED states
+	// (blinking, off) had no effect on it in a live test
+	.high_leds = { .mux = LED_27 | LED_28_SYS | LED_29, .enable = LED_28_SYS | LED_29 },
 	// RJ45 ports use set 0, the SFP ports set 1
 	.port_led_set = { 0, 0, 0, 1, 0, 0, 0, 0, 1},
 	.led_sets = {
@@ -52,10 +54,11 @@ __code const struct machine machine = {
 			0,
 		}},
 	// LED pads, found by lighting them in turn: 9/10 port 1 amber/green, 12/15 port 2,
-	// 18/21 port 3, 24/25 port 4, 26 port 5 (left SFP). Port 6's LED isn't on pads 8-27.
+	// 18/21 port 3, 24/25 port 4, 26 port 5 (left SFP), 6 port 6 (right SFP; enabled
+	// in POE_2G040210GSM_init.c)
 	.led_mux_custom = 1,
 	.led_mux = { 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, // 65e0
-		     0x3f, 0x3f, 0x3f, 0x3f, 0x10, // 65e4
+		     0x3f, 0x20, 0x3f, 0x3f, 0x10, // 65e4
 		     0x11, 0x3f, 0x14, 0x3f, 0x3f, // 65e8
 		     0x15, 0x3f, 0x3f, 0x18, 0x3f, // 65ec
 		     0x3f, 0x19, 0x3f, 0x3f, 0x1c, // 65f0

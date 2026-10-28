@@ -44,8 +44,8 @@ Tested on one switch, flashed with a CH341A clip:
 
 - The reset button is on GPIO48, low while pressed (as on the 2M-PCB23-V3.1). A short press does
   nothing, and holding it for more than 3 s restarts the switch (both tested). Held more than
-  10 s, it also restores the default settings (not tested). No system LED has been
-  found to show that the button is held.
+  10 s, it also restores the default settings (not tested). The "S" LED can't blink on
+  this board, so nothing shows that the button is held.
 - Firmware updates through the web UI work; they leave the MAC sector alone.
 
 - Both SFP+ ports: modules are detected, their EEPROMs and readings are read, and a fibre between
@@ -155,7 +155,8 @@ from forwarding to each other or to the RJ45 ports, so the loop couldn't flood t
 
 ### LEDs
 
-Each RJ45 port has a green and an amber LED, and the left SFP port a green one. The LED pads were
+Each RJ45 port has a green and an amber LED, each SFP port a green one, and there is a system LED
+marked "S". The LED pads were
 found by routing pads to a lit source in turn, with `regset` on the LED mux registers
 (`0x65e0`-`0x65f4`) while RTLPlayground ran:
 
@@ -165,12 +166,18 @@ found by routing pads to a lit source in turn, with `regset` on the LED mux regi
 | Port 1 green | 10 | | Port 3 green | 21 |
 | Port 2 amber | 12 | | Port 4 amber | 24 |
 | Port 2 green | 15 | | Port 4 green | 25 |
-| Port 5 (left SFP) | 26 | | | |
+| Port 5 (left SFP) | 26 | | Port 6 (right SFP) | 6 |
 
-None of pads 8-27 lit a port 6 (right SFP) LED or a system LED. Pads 0-7 aren't tested.
+Pads 0-7 are disabled at reset (`LED_GLB_IO_EN` bits 0-7), so `POE_2G040210GSM_init.c` enables
+pad 6.
+
+The "S" LED is on the chip's LED 28 output. It lights when `PIN_MUX_0` bit 28 and
+`LED_GLB_IO_EN` bit 28 are both set, and is dark if either is clear. It stays lit steadily: setting
+the system LED state in `LED_MODE` to blink or off made no difference, so RTLPlayground's
+blink patterns (such as the reset button's feedback) don't show on it.
 
 The target lights the green LED for a 2.5G or 10G link and the amber LED for 1G, 100M or 10M, both
-blinking on activity. The SFP LED shows any link and activity. Whether that matches the stock
+blinking on activity. The SFP LEDs show any link and activity. Whether that matches the stock
 firmware hasn't been compared.
 
 Pad 10 is also GPIO10, which the 2M-PCB43-V1.1 uses as its left SFP's LOS input, so this target
@@ -215,7 +222,7 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
   port's PoE setting would show the link and its protocol.
 - Whether the ports supply PoE when the RTL8238B gets no commands (under RTLPlayground).
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
-- 2.5G links and the green LEDs, the port 6 and system LEDs.
+- 2.5G links and the green LEDs. Making the "S" LED blink.
 - SFP LOS: no GPIO input follows it. These can be read from
   the stock firmware's pin-mux, GPIO and LED registers over `T7` while it runs.
 - What `T3` is: a 2-pin header with pin 1 on GND, next to the crystal `Y1`, so perhaps a button or
