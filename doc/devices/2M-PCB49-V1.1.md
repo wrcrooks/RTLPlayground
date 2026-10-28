@@ -135,6 +135,23 @@ configure PoE.
   `5a 5a a5 a5`, so it may be a broadcast or global address. The dump, taken with nothing
   connected, is in [data/2M-PCB49-V1.1-rtl8238b-regs.txt](data/2M-PCB49-V1.1-rtl8238b-regs.txt).
   Nothing has been written to the chip.
+- **The stock firmware uploads an image to the RTL8238B at every boot.** From a disassembly of the
+  stock flash (Keil C51, banked; PSBANK `n` maps to image offset `0x4000 + (n - 1) * 0xc000`):
+  - The init (bank 19, `0x89aa`) resets the chip, "disables all the PSE ports" by reading
+    register `0x10` of `0x20` and `0x21`, then calls the loader (bank 21, `0x833a`).
+  - The loader disables interrupts, writes `03 00 00 00` to register `0xec` of `0x20`, waits
+    10 ms and reads `0xec` back. If bit 2 of its first byte is clear, it writes `00 00 20 39` to
+    register `0x18`, waits 10 ms and writes `0xec` again. Then it writes the whole image to
+    register `0xf4` and reads `0xec` once more: bit 5 of the first byte set means "load ok".
+  - The image is one of two blobs stored in bank 21 right after the loader: `0x52ac` bytes at
+    `0x8428` or `0x1f5c` bytes at `0xd6d4`, picked by a chip-type check that reads register
+    `0xe8` (not decoded yet).
+  - All of it goes through a bit-banged I²C master on `GPIO46`/`GPIO47` (common code `0x1202`),
+    and each write is one transaction: address, register byte, then every data byte, so the image
+    goes out as a single 8 or 21 KB write. The RTL8372's I²C master moves at most 16 bytes, so
+    RTLPlayground would need its own bit-banged writer to do the same.
+  - Values are sent in memory order, which reads back as big-endian 32-bit registers: register
+    `0x18` reads `00 00 00 39` before a load, `0xec` reads `02 00 00 00`.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
   Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
