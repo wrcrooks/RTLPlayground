@@ -41,7 +41,10 @@ the port mapping, SFP pins, reset button and LEDs all still have to be confirmed
 - `U6`: flash, Winbond W25Q16JVSIQ, 2 MiB
 - `U5`: an unpopulated SOIC-8 footprint next to `T7`, like `U7` on the 2M-PCB23-V3.1 (an I²C
   EEPROM on the slave interface's bus)
-- `U16`: a 2×10 connector for the PoE daughterboard
+- `U16`: a 2×10 socket for the PoE daughterboard, under its left edge, between the power input
+  and the heatsink. Pin 1 is at the front end, towards the RJ45 ports (a triangle on the top
+  silkscreen, the square pad on the bottom); pins 19 and 20 are at the back, near `T4`. Its
+  solder joints are easiest to reach from the bottom, with the daughterboard plugged in.
 - `T14`: V48C01S magnetics for the four RJ45 ports
 - `JA1`-`JA4`: the two SFP+ cages
 - `J1`/`J2` (`V+`, `V-`): power from the internal supply board, whose label reads "72W REV:A"
@@ -77,13 +80,14 @@ configure PoE.
 
 - **Controller:** an RTL8238B (`U1`) on the StandardPOE8-V1.0 daughterboard, an 8-channel design
   of which 4 are used. It plugs into `U16` on the main board, so whatever controls PoE runs
-  through that connector. The daughterboard has a 4-pad row on its right edge, perhaps for
-  programming or a UART, and an outlined spot `U2` near its top edge that may or may not hold a
-  part. The [Hasivo S1100P](Hasivo-S1100P-8GT-1SX-S.md) also has an RTL8238B, managed there by a
+  through that connector. The RTL8238B is the daughterboard's only chip: its `U2` footprint is
+  unpopulated, so there is no separate microcontroller on it. Either the RTL8238B runs PoE by
+  itself, or the main board drives it through `U16`. The daughterboard also has a 4-pad row on
+  its right edge, perhaps for programming or a UART. The [Hasivo S1100P](Hasivo-S1100P-8GT-1SX-S.md) also has an RTL8238B, managed there by a
   separate STC8H8K64U microcontroller. (The MokerLink POE-2G080110GS,
   [2M-PCB51-ML-V1.1](2M-PCB51-ML-V1_1.md), uses an RTL8238C.)
-- **Protocol** (likely, from the relatives): RTL8238-based PoE is driven through a microcontroller
-  over a UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect
+- **Protocol** (from the relatives, unconfirmed here): RTL8238-based PoE is usually driven
+  through a microcontroller over a UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect
   of the Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
 - **Check before trusting the SFP pins:** if the stock firmware has PoE settings, the RTL8372 talks
   to the PoE side through `U16`, most likely on UART1 (GPIO50 TX, GPIO51 RX). The target copied from
