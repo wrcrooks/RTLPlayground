@@ -14,6 +14,8 @@ __code const struct machine machine = {
 	MACHINE_COMMON_SETTING,
 	// The stock firmware keeps the switch's MAC address here
 	.mac_flash_offset = 0x1FC000,
+	// The RTL8238B on the PoE daughterboard needs its image loaded at boot
+	.pse_rtl8238 = 1,
 	.n_sfp = 2,
 	.log_to_phys_port = {0, 0, 0, 5, 1, 2, 3, 4, 6},
 	.phys_to_log_port = {4, 5, 6, 7, 3, 8, 0, 0, 0},

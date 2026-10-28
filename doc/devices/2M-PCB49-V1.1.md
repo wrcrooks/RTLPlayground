@@ -152,6 +152,16 @@ configure PoE.
     RTLPlayground would need its own bit-banged writer to do the same.
   - Values are sent in memory order, which reads back as big-endian 32-bit registers: register
     `0x18` reads `00 00 00 39` before a load, `0xec` reads `02 00 00 00`.
+- **Loading the image with RTLPlayground.** `rtl8238.c` repeats the stock sequence at boot
+  (before the saved configuration is applied) over a bit-banged I²C master on `GPIO46`/`GPIO47`,
+  on machines with `.pse_rtl8238 = 1`. The image itself is the PoE controller vendor's firmware,
+  so it isn't in this repository: a build only loads it when given one,
+  `make MACHINE=POE_2G040210GSM PSE_IMAGE=<file>`, where `<file>` is packed from your own copies
+  of the image(s) with `tools/mkpseimage.py IMAGE0 IMAGE1 <file>` (image 1 is used when register
+  `0xe8` reads 2, image 0 otherwise; `-` for one you don't have). The build places it at
+  `0x71000`-`0x7efff` in the firmware image (56 KiB), so web updates carry it. Without it the
+  boot log says "no RTL8238B image in this build" and PoE stays off. The console command `poe`
+  reads the chip's status registers over the same I²C.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
   Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).

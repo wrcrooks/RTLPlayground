@@ -3,10 +3,18 @@ IMAGESIZE = 524288
 DEFAULT_CONFIG_LOCATION = 454656
 CONFIG_LOCATION = 458752
 HTML_LOCATION = 262144
+# RTL8238B PSE image region (rtl8238.h PSE_IMAGE_START / PSE_IMAGE_MAX)
+PSE_IMAGE_LOCATION = 462848
+PSE_IMAGE_MAX = 57344
 
 # Startup configuration embedded in the image. Override it to build a specific
 # machine with its own configuration: make MACHINE=<name> CONFIG=<file>
 CONFIG ?= config.txt
+
+# Optional RTL8238B PSE image for boards with machine.pse_rtl8238, packed with
+# tools/mkpseimage.py: make MACHINE=POE_2G040210GSM PSE_IMAGE=<file>. The image
+# is the PoE controller vendor's firmware and is not part of this repository.
+PSE_IMAGE ?=
 
 SDCC_TOOLCHAIN = sdcc-$(shell cat sdcc/* | cksum | cut -d' ' -f1)
 SDCC_PREFIX = toolchain/$(SDCC_TOOLCHAIN)
@@ -61,6 +69,7 @@ ifndef BUILDDIR
 endif
 
 CONFIG_STAMP := $(BUILDDIR)/.config
+PSE_STAMP := $(BUILDDIR)/.pse_image
 VERSION_HEADER := version.h
 
 GIT_VERSION := $(shell git rev-parse --short HEAD)
@@ -151,7 +160,8 @@ SRCS += \
 	rtl837x_storm.c \
 	rtl837x_lacp.c \
 	rtl837x_trap.c \
-	rtl837x_stp_cli.c
+	rtl837x_stp_cli.c \
+	rtl8238.c
 SRCS += \
 	httpd/httpd.c \
 	httpd/page_impl.c \
@@ -240,6 +250,9 @@ $(CCFLAGS_STAMP): FORCE | create_build_dir
 $(CONFIG_STAMP): FORCE | create_build_dir
 	@echo '$(CONFIG)' | cmp -s - $@ 2>/dev/null || echo '$(CONFIG)' > $@
 
+$(PSE_STAMP): FORCE | create_build_dir
+	@echo '$(PSE_IMAGE)' | cmp -s - $@ 2>/dev/null || echo '$(PSE_IMAGE)' > $@
+
 $(BUILDDIR)/%.rel: %.c $(CCFLAGS_STAMP) | create_build_dir html_data.h
 	$(CC) -MMD $(CC_FLAGS) -o $@ -c $<
 
@@ -253,12 +266,18 @@ $(BUILDDIR)/rtlplayground.ihx: $(OBJS) $(BUILDDIR)/crtbank.rel $(BUILDDIR)/crc16
 $(BUILDDIR)/rtlplayground.img: $(BUILDDIR)/rtlplayground.ihx
 	objcopy --input-target=ihex -O binary $< $@
 
-$(BUILDDIR)/rtlplayground-$(FILENAME_EXTENSION).bin: $(BUILDDIR)/rtlplayground.img $(CONFIG) $(CONFIG_STAMP) | tools
+$(BUILDDIR)/rtlplayground-$(FILENAME_EXTENSION).bin: $(BUILDDIR)/rtlplayground.img $(CONFIG) $(CONFIG_STAMP) $(PSE_STAMP) $(PSE_IMAGE) | tools
 	if [ -e $@ ]; then rm $@; fi
 	tools/$(BUILDDIR)/imagebuilder -i $(BUILDDIR)/rtlplayground.img $@
 	tools/$(BUILDDIR)/fileadder -a $(DEFAULT_CONFIG_LOCATION) -s $(IMAGESIZE) -d "$(CONFIG)" $@
 	tools/$(BUILDDIR)/fileadder -a $(CONFIG_LOCATION) -s $(IMAGESIZE) -d "$(CONFIG)" $@
 	tools/$(BUILDDIR)/fileadder -a $(HTML_LOCATION) -s $(IMAGESIZE) -z -d $(HTML_MIN) -b BANK1 $@
+ifneq ($(PSE_IMAGE),)
+	@if [ "$$(head -c 4 "$(PSE_IMAGE)")" != PSE1 ] || [ "$$(wc -c < "$(PSE_IMAGE)")" -gt $(PSE_IMAGE_MAX) ]; then \
+		echo "ERROR: PSE_IMAGE='$(PSE_IMAGE)' is not a packed image of at most $(PSE_IMAGE_MAX) bytes (tools/mkpseimage.py)." >&2; \
+		rm -f $@; false; fi
+	tools/$(BUILDDIR)/fileadder -a $(PSE_IMAGE_LOCATION) -s $(IMAGESIZE) -d "$(PSE_IMAGE)" $@
+endif
 	tools/$(BUILDDIR)/crc_calculator -u $@
 	ln -sf $(MACHINE)/rtlplayground-$(FILENAME_EXTENSION).bin $(BUILDDIR)/../rtlplayground.bin
 

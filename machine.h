@@ -109,6 +109,9 @@ struct machine {
 	// random resets. Costs management-plane speed only, the ASIC keeps
 	// forwarding in hardware.
 	uint8_t flash_sio;
+	// An RTL8238B PSE controller on I2C (GPIO46/47) whose image is loaded at
+	// boot, see rtl8238.c
+	uint8_t pse_rtl8238;
 };
 
 struct machine_runtime

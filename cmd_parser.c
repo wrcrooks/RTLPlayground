@@ -32,6 +32,7 @@
 
 #include "machine.h"
 #include "rtl837x_leds.h"
+#include "rtl8238.h"
 #include "phy.h"
 
 #pragma codeseg BANK2
@@ -2037,6 +2038,8 @@ void cmd_parser(void) __banked
 			write_char('\n');
 		} else if (cmd_compare(0, "gpio")) {
 			print_gpio_status();
+		} else if (cmd_compare(0, "poe")) {
+			pse_status();
 		} else if (cmd_compare(0, "leds")) {
 			leds_dump();
 		} else if (cmd_compare(0, "regget")) {
