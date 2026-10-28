@@ -42,9 +42,11 @@ Tested on one switch, flashed with a CH341A clip:
   sector when flashing a full image with a clip: an image padded with `0xFF` erases it, and the
   switch then makes up a locally administered MAC.
 
-- The reset button is on GPIO48, low while pressed (as on the 2M-PCB23-V3.1). RTLPlayground's
-  usual handling applies: held more than 3 s it restarts the switch, more than 10 s it also
-  restores the default settings.
+- The reset button is on GPIO48, low while pressed (as on the 2M-PCB23-V3.1). A short press does
+  nothing, and holding it for more than 3 s restarts the switch (both tested). Held more than
+  10 s, it also restores the default settings (not tested). The board has no system LED to show
+  that the button is held.
+- Firmware updates through the web UI work; they leave the MAC sector alone.
 
 Not known yet: the SFP pins, and whether PoE works (see [PoE](#poe)).
 
