@@ -34,8 +34,10 @@ from the same vendor. Its header layout is closer to the [2M-PCB23-V3.1](2M-PCB2
 Tested on one switch, flashed with a CH341A clip:
 
 - It boots and serves the web UI. Chip temperature and the 2 MB flash are detected.
-- Port 1 links at 1G and passes traffic, on the front's port 1. Ports 2-4 are not tested yet.
-- The RJ45 LEDs and the left SFP's LED, mapped on this board (see [LEDs](#leds)).
+- All four RJ45 ports link at 1G and pass traffic, each on the matching front-panel port. 2.5G
+  is not tested yet.
+- The LEDs, mapped on this board (see [LEDs](#leds)). Each port's amber LED lights and blinks
+  with a 1G link; the green (2.5G) and SFP LEDs are mapped but not yet seen lit by a real link.
 - The MAC address is read from the stock firmware's copy at flash offset `0x1FC000`. Keep that
   sector when flashing a full image with a clip: an image padded with `0xFF` erases it, and the
   switch then makes up a locally administered MAC.
@@ -186,7 +188,7 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
   port's PoE setting would show the link and its protocol.
 - Whether the ports supply PoE when the RTL8238B gets no commands (under RTLPlayground).
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
-- Ports 2-4 mapping, the port 6 and system LEDs.
+- 2.5G links and the green LEDs, the port 6 and system LEDs.
 - SFP pins (module detect, LOS, I²C) and the reset button. These can be read from
   the stock firmware's pin-mux, GPIO and LED registers over `T7` while it runs.
 - What `T3` is: a 2-pin header with pin 1 on GND, next to the crystal `Y1`, so perhaps a button or

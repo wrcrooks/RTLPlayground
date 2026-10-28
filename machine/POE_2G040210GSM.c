@@ -4,9 +4,9 @@
  * MokerLink POE-2G040210GSM, PCB 2M-PCB49-V1.1: 4 x 2.5G PoE + 2 x 10G SFP+.
  *
  * Copied from the non-PoE 2G040210GSM (2M-PCB43-V1.1, KP_9000_6XHML_X2_V1_1),
- * which uses the same RTL8372 4+2 design. Checked on this board: boots, port 1
- * maps to the front's port 1, and the LEDs below. Still to be confirmed: ports
- * 2-4, the SFP pins and the reset button. See doc/devices/2M-PCB49-V1.1.md
+ * which uses the same RTL8372 4+2 design. Checked on this board: boots, the four
+ * RJ45 ports map to the front panel, and the LEDs below. Still to be
+ * confirmed: the SFP pins and the reset button. See doc/devices/2M-PCB49-V1.1.md
  * for what is known and what is open.
  * PoE is handled by the board itself and isn't configured here.
  */
