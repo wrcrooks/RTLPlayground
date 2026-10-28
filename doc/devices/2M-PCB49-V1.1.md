@@ -125,6 +125,16 @@ configure PoE.
 - **I²C, going by the stock firmware.** Its strings include `PSE IC Type: RTL8238b` and
   `address: 0x20 pse_init` / `address: 0x21 pse_init`, which point to the RTL8238B on an I²C bus at
   `0x20` and `0x21` rather than a UART. `GPIO50`/`GPIO51` are also the RTL8372's I²C bus 2.
+- **Found on I²C bus 0: SDA `GPIO47`, SCL `GPIO46`.** Probed from RTLPlayground with the RTL8372's
+  own I²C master (raw transactions through `regset`/`regget` on `0x0418`-`0x0424`, after
+  switching the pins to I²C in `PIN_MUX_1`). A scan of 0x08-0x77 gets answers at `0x20`, `0x21`
+  and `0x60` only. No other pairing of buses 0 and 2 (`GPIO46/47`, `GPIO50/51`) answers.
+- **Registers.** All three addresses return a 256-register map of mostly 16-bit values. `0x20` and
+  `0x21` read the same (two halves of the chip, presumably 4 channels each); `0x60` matches them
+  except at `0x12`-`0x13` and `0x42`-`0x43`, and reads `0` at `0xf0`-`0xf3` where the others read
+  `5a 5a a5 a5`, so it may be a broadcast or global address. The dump, taken with nothing
+  connected, is in [data/2M-PCB49-V1.1-rtl8238b-regs.txt](data/2M-PCB49-V1.1-rtl8238b-regs.txt).
+  Nothing has been written to the chip.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
   Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
