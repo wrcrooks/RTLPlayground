@@ -25,6 +25,10 @@ target `POE_2G040210GSM` exists, but nothing has been tested on this board yet.
 same vendor. Its header layout is closer to the [2M-PCB23-V3.1](2M-PCB23-V3_1.md)'s, though, so the
 port mapping, SFP pins, reset button and LEDs all still have to be confirmed on this board.
 
+Flash: a Winbond W25Q16JVSIQ, 2 MiB, so the standard layout applies (web updates need no
+`LAYOUT=compact`), and the default dual-I/O flash reads should work (`flash_sio` stays 0). For a
+backup with a CH341A, flashrom names the chip `W25Q16.V`.
+
 PoE: as on the other PoE boards (see [supported devices](../supported_devices.md)), the board powers
 the ports by itself and RTLPlayground doesn't configure PoE.
 
@@ -60,8 +64,7 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 ### Still open
 
 - Photos of the front, label and both sides of the PCB.
-- The flash chip and its size, and a backup of the stock firmware (SPI clip, switch unpowered),
-  before anything else is flashed.
+- A backup of the stock firmware (SPI clip, switch unpowered), before anything else is flashed.
 - The RTL chip's marking, to confirm the RTL8372.
 - The PoE controller(s) and whether they hang off an I²C bus of the RTL8372.
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
