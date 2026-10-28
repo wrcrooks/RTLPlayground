@@ -32,12 +32,12 @@ backup with a CH341A, flashrom names the chip `W25Q16.V`.
 ### PoE
 
 As on the other PoE boards (see [supported devices](../supported_devices.md)), RTLPlayground doesn't
-configure PoE. Not yet checked on this board, but likely from its relatives:
+configure PoE.
 
-- **Controller:** the MokerLink POE-2G080110GS ([2M-PCB51-ML-V1.1](2M-PCB51-ML-V1_1.md)) uses an
+- **Controller:** an RTL8238 on this board (the letter suffix, B or C, still to be read). The MokerLink POE-2G080110GS ([2M-PCB51-ML-V1.1](2M-PCB51-ML-V1_1.md)) uses an
   RTL8238C, and the [Hasivo S1100P](Hasivo-S1100P-8GT-1SX-S.md) an RTL8238B managed by a separate
   STC8H8K64U microcontroller.
-- **Protocol:** RTL8238-based PoE is driven through such a microcontroller over a UART, 115200 8N1,
+- **Protocol** (likely, from the relatives): RTL8238-based PoE is driven through such a microcontroller over a UART, 115200 8N1,
   12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the Broadcom PoE
   protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
 - **Check before trusting the SFP pins:** if the stock firmware has PoE settings, the RTL8372 talks
@@ -78,7 +78,7 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 - Photos of the front, label and both sides of the PCB.
 - A backup of the stock firmware (SPI clip, switch unpowered), before anything else is flashed.
 - The RTL chip's marking, to confirm the RTL8372.
-- The PoE controller and its microcontroller, and whether that one is wired to the RTL8372's UART1
+- The RTL8238's suffix, its microcontroller, and whether that one is wired to the RTL8372's UART1
   (GPIO50/51) or an I²C bus. Whether the stock web UI has PoE settings.
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
 - SFP pins (module detect, LOS, I²C), the reset button and the LED wiring. These can be read from
