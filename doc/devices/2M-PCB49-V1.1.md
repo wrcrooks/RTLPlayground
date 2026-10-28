@@ -48,9 +48,10 @@ Tested on one switch, flashed with a CH341A clip:
   found to show that the button is held.
 - Firmware updates through the web UI work; they leave the MAC sector alone.
 
-- SFP modules are detected in both cages, and their EEPROMs are read (see [SFP](#sfp)).
+- Both SFP+ ports: modules are detected, their EEPROMs and readings are read, and a fibre between
+  the two cages (two FS SFP-10GLRM-31) links at 10G and passes frames both ways (see [SFP](#sfp)).
 
-Not known yet: SFP links, and whether PoE works (see [PoE](#poe)).
+Not known yet: whether PoE works (see [PoE](#poe)).
 
 ### PCB overview
 
@@ -145,8 +146,12 @@ inputs and reading the EEPROM from each cage's configured bus:
 
 Both cages differ from the 2M-PCB43-V1.1 (detect GPIO50 / GPIO30, and the two SDA lines the other
 way round). No GPIO input changed with the LOS of a module without fibre, so LOS may not be wired
-to a GPIO. Which SerDes serves which cage is still the 2M-PCB43-V1.1's guess, untested without a
-link.
+to a GPIO.
+
+The SerDes mapping (port 5 on SerDes 0, port 6 on SerDes 1) is right: with a module in each cage
+and a fibre jumper between them, both ports linked at 10G, and 100 broadcast frames sent out of
+each port arrived at the other, with no errors. (For this test, port isolation kept the two ports
+from forwarding to each other or to the RJ45 ports, so the loop couldn't flood the switch.)
 
 ### LEDs
 
@@ -211,7 +216,7 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 - Whether the ports supply PoE when the RTL8238B gets no commands (under RTLPlayground).
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
 - 2.5G links and the green LEDs, the port 6 and system LEDs.
-- SFP links: the SerDes mapping, and LOS. These can be read from
+- SFP LOS: no GPIO input follows it. These can be read from
   the stock firmware's pin-mux, GPIO and LED registers over `T7` while it runs.
 - What `T3` is: a 2-pin header with pin 1 on GND, next to the crystal `Y1`, so perhaps a button or
   jumper input (the reset button?).

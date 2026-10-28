@@ -5,9 +5,8 @@
  *
  * Copied from the non-PoE 2G040210GSM (2M-PCB43-V1.1, KP_9000_6XHML_X2_V1_1),
  * which uses the same RTL8372 4+2 design. Checked on this board: boots, the four
- * RJ45 ports map to the front panel, the LEDs, the reset button and the SFP
- * module detect and EEPROM pins below. Still to be
- * confirmed: SFP links (SerDes mapping) and LOS. See doc/devices/2M-PCB49-V1.1.md
+ * RJ45 ports map to the front panel, both SFP+ ports link at 10G, and the
+ * LEDs, reset button and SFP pins below. Not found: SFP LOS. See doc/devices/2M-PCB49-V1.1.md
  * for what is known and what is open.
  * PoE is handled by the board itself and isn't configured here.
  */
@@ -21,8 +20,8 @@ __code const struct machine machine = {
 	.is_sfp = {0, 0, 0, 1, 0, 0, 0, 0, 2},
 	// SFP pins, seen on this board by moving a module between the cages: module
 	// detect is low while a module is in, and the EEPROM answers on the bus
-	// listed. No GPIO input changed for LOS, so it isn't used. The SerDes
-	// numbers are still the 2M-PCB43-V1.1's, unverified.
+	// listed. No GPIO input changed for LOS, so it isn't used. A fibre
+	// between the two cages links at 10G both ways with these SerDes numbers.
 	// Left SFP port (5)
 	.sfp_port[0].pin_detect = GPIO38,
 	.sfp_port[0].pin_los = GPIO_NA,
