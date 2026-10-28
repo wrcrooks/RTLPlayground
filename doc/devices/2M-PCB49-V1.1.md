@@ -143,9 +143,12 @@ configure PoE.
     10 ms and reads `0xec` back. If bit 2 of its first byte is clear, it writes `00 00 20 39` to
     register `0x18`, waits 10 ms and writes `0xec` again. Then it writes the whole image to
     register `0xf4` and reads `0xec` once more: bit 5 of the first byte set means "load ok".
-  - The image is one of two blobs stored in bank 21 right after the loader: `0x52ac` bytes at
-    `0x8428` or `0x1f5c` bytes at `0xd6d4`, picked by a chip-type check that reads register
-    `0xe8` (not decoded yet).
+  - The image is one of two blobs stored in bank 21 right after the loader, back to back: the
+    first is `0x52ac` bytes at bank-relative `0x8428`, the second `0x1f5c` bytes at `0xd6d4`
+    (image offsets `0xf8428` and `0xfd6d4` in a 2 MiB dump of this board). Both start with the
+    same four bytes, `00 00 39 82`. The loader reads register `0xe8` and compares it with 2:
+    equal picks the `0x1f5c` blob, anything else the `0x52ac` one. This board reads `0xe8` as
+    `00 00 00 00`, so it uses the `0x52ac` blob.
   - All of it goes through a bit-banged I²C master on `GPIO46`/`GPIO47` (common code `0x1202`),
     and each write is one transaction: address, register byte, then every data byte, so the image
     goes out as a single 8 or 21 KB write. The RTL8372's I²C master moves at most 16 bytes, so
