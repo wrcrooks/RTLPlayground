@@ -79,19 +79,27 @@ As on the other PoE boards (see [supported devices](../supported_devices.md)), R
 configure PoE.
 
 - **Controller:** an RTL8238B (`U1`) on the StandardPOE8-V1.0 daughterboard, an 8-channel design
-  of which 4 are used. It plugs into `U16` on the main board, so whatever controls PoE runs
-  through that connector. The RTL8238B is the daughterboard's only chip: its `U2` footprint is
-  unpopulated, so there is no separate microcontroller on it. Either the RTL8238B runs PoE by
-  itself, or the main board drives it through `U16`. The daughterboard also has a 4-pad row on
-  its right edge, perhaps for programming or a UART. The [Hasivo S1100P](Hasivo-S1100P-8GT-1SX-S.md) also has an RTL8238B, managed there by a
-  separate STC8H8K64U microcontroller. (The MokerLink POE-2G080110GS,
-  [2M-PCB51-ML-V1.1](2M-PCB51-ML-V1_1.md), uses an RTL8238C.)
-- **Protocol** (from the relatives, unconfirmed here): RTL8238-based PoE is usually driven
-  through a microcontroller over a UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect
-  of the Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
-- **Check before trusting the SFP pins:** if the stock firmware has PoE settings, the RTL8372 talks
-  to the PoE side through `U16`, most likely on UART1 (GPIO50 TX, GPIO51 RX). The target copied from
-  the 2M-PCB43-V1.1 uses GPIO50 as the left SFP's module detect, which would then be wrong.
+  of which 4 are used. It plugs into `U16` on the main board. The RTL8238B is the daughterboard's
+  only chip: its `U2` footprint is unpopulated, so there is no separate microcontroller on it. The
+  daughterboard also has a 4-pad row on its right edge, perhaps for programming or a UART. The
+  [Hasivo S1100P](Hasivo-S1100P-8GT-1SX-S.md) also has an RTL8238B, managed there by a separate
+  STC8H8K64U microcontroller. (The MokerLink POE-2G080110GS, [2M-PCB51-ML-V1.1](2M-PCB51-ML-V1_1.md),
+  uses an RTL8238C.)
+- **The stock firmware manages PoE.** Its web UI has a PoE power consumption readout and a "PSE
+  Port Settings" page that turns PoE on and off per port and shows each port's type, power (W),
+  voltage (V) and current (mA). With no microcontroller on the daughterboard, that means the RTL8372
+  itself talks to the RTL8238B through `U16`, in both directions (the readings come back from it).
+- **Protocol** (from the relatives, unconfirmed here): RTL8238-based PoE is usually driven over a
+  UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
+  Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)). The
+  RTL8372's UART1 is the likely link: GPIO50 (TX) and GPIO51 (RX). An I²C bus is the other
+  possibility.
+- **Under RTLPlayground, PoE may stay off.** RTLPlayground sends the RTL8238B nothing. Whether the
+  ports still supply power then depends on what the RTL8238B does by itself after power-up, which
+  isn't known. Check it before relying on PoE with RTLPlayground.
+- **The left SFP's pins are suspect.** The target copied from the 2M-PCB43-V1.1 uses GPIO50 as the
+  left SFP's module detect. If GPIO50/51 go to `U16` here, the left SFP's detect (and maybe LOS)
+  must be on other pins, and the target is wrong.
 
 ### Headers
 
@@ -129,7 +137,9 @@ The slave interface on `T7` should answer at I²C address `0x5c` with chip ID `0
 - A backup of the stock firmware (SPI clip, switch unplugged), before anything else is flashed.
 - The RTL chip's marking, to confirm the RTL8372.
 - What `U16` carries: continuity from its pins to the RTL8372 side, above all to GPIO50/51
-  (UART1) and the I²C buses. Whether the stock web UI has PoE settings.
+  (UART1) and the I²C buses. A logic analyser on the `U16` pins while the stock web UI changes a
+  port's PoE setting would show the link and its protocol.
+- Whether the ports supply PoE when the RTL8238B gets no commands (under RTLPlayground).
 - The serial console on `T9`: baud rate and the stock firmware's boot log.
 - SFP pins (module detect, LOS, I²C), the reset button and the LED wiring. These can be read from
   the stock firmware's pin-mux, GPIO and LED registers over `T7` while it runs.

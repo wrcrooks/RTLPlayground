@@ -16,7 +16,8 @@ __code const struct machine machine = {
 	.log_to_phys_port = {0, 0, 0, 5, 1, 2, 3, 4, 6},
 	.phys_to_log_port = {4, 5, 6, 7, 3, 8, 0, 0, 0},
 	.is_sfp = {0, 0, 0, 1, 0, 0, 0, 0, 2},
-	// Left SFP port (5): unverified
+	// Left SFP port (5): unverified. The stock firmware manages PoE through
+	// U16, probably over UART1 (GPIO50/51), so GPIO50 is likely wrong here.
 	.sfp_port[0].pin_detect = GPIO50_I2C_SCL2_UART1_TX,
 	.sfp_port[0].pin_los = GPIO10_LED10,
 	.sfp_port[0].pin_tx_disable = GPIO_NA,
