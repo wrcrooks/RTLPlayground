@@ -50,6 +50,8 @@ extern __xdata uint8_t flash_buf[FLASH_BUF_SIZE];
 static __xdata uint8_t gpio_dir[4];
 static __xdata uint8_t i2c_low;
 static __xdata uint8_t pse_buf[4];
+// 0 = ok, 1 = device/register byte, 2-5 = data byte 1-4
+static __xdata uint8_t pse_fail;
 static __xdata uint32_t img_len[2];
 
 static void i2c_wait(void)
@@ -195,19 +197,24 @@ static bool pse_write(uint8_t dev, uint8_t reg)
 {
 	__xdata uint8_t i;
 
-	if (!pse_begin(dev, reg))
+	if (!pse_begin(dev, reg)) {
+		pse_fail = 1;
 		return false;
+	}
 	for (i = 0; i < 4; i++) {
 		if (!i2c_write_byte(pse_buf[i])) {
+			pse_fail = i + 2;
 			i2c_stop();
 			return false;
 		}
 	}
 	i2c_stop();
+	pse_fail = 0;
 	return true;
 }
 
-// Read 4 bytes from a register into pse_buf, in the order received
+// Read 4 bytes from a register into pse_buf, in the order received. The chip
+// sends the least significant byte first, so the status bits are in pse_buf[0].
 static bool pse_read(uint8_t dev, uint8_t reg)
 {
 	__xdata uint8_t i;
@@ -295,20 +302,27 @@ void pse_load(void) __banked
 	}
 	i2c_setup();
 
-	// Step 0 of the stock init: reset the whole chip
-	pse_set(0x20, 0x00, 0x00, 0x00);
+	// Step 0 of the stock init: reset the whole chip. The stock firmware
+	// stores the payload as a 32-bit 0x20, which Keil C51 lays out most
+	// significant byte first, so it goes on the wire as 00 00 00 20.
+	pse_set(0x00, 0x00, 0x00, 0x20);
 	if (!pse_write(PSE_ADDR_0, 0x1a)) {
-		print_string("PSE: no answer from the RTL8238B at 0x20\n");
+		print_string("PSE: reset write to 0x1a refused at byte ");
+		print_byte(pse_fail); write_char('\n');
 		return;
 	}
 	delay(100);
 
 	pse_set(0x03, 0x00, 0x00, 0x00);
-	pse_write(PSE_ADDR_0, 0xec);
+	if (!pse_write(PSE_ADDR_0, 0xec)) {
+		print_string("PSE: write to 0xec refused at byte ");
+		print_byte(pse_fail); write_char('\n');
+		return;
+	}
 	delay(1);
 	pse_read(PSE_ADDR_0, 0xec);
 	print_string("PSE: status before load:"); pse_print_buf(); write_char('\n');
-	if (!(pse_buf[3] & 0x04)) {
+	if (!(pse_buf[0] & 0x04)) {
 		pse_set(0x00, 0x00, 0x20, 0x39);
 		pse_write(PSE_ADDR_0, 0x18);
 		delay(10);
@@ -328,20 +342,20 @@ void pse_load(void) __banked
 		addr += img_len[0];
 
 	print_string("PSE: loading image "); write_char('0' + img);
-	print_string(", 0x"); print_long(img_len[img]); print_string(" bytes\n");
+	print_string(", "); print_long(img_len[img]); print_string(" bytes\n");
 	nacks = pse_write_image(addr, img_len[img]);
 	if (nacks == 0xffff) {
 		print_string("PSE: load failed, no answer\n");
 		return;
 	}
 	if (nacks) {
-		print_string("PSE: bytes not acknowledged: 0x"); print_short(nacks); write_char('\n');
+		print_string("PSE: bytes not acknowledged: "); print_short(nacks); write_char('\n');
 	}
 
 	delay(10);
 	pse_read(PSE_ADDR_0, 0xec);
 	print_string("PSE: status after load:"); pse_print_buf();
-	print_string(pse_buf[3] & 0x20 ? " - load ok\n" : " - load failed\n");
+	print_string(pse_buf[0] & 0x20 ? " - load ok\n" : " - load failed\n");
 	delay(10);
 }
 
@@ -368,8 +382,8 @@ void pse_status(void) __banked
 	pse_status_dev(PSE_ADDR_0);
 	pse_status_dev(PSE_ADDR_1);
 	if (pse_image_header()) {
-		print_string("Image in flash: 0x"); print_long(img_len[0]);
-		print_string(" and 0x"); print_long(img_len[1]); print_string(" bytes\n");
+		print_string("Image in flash: "); print_long(img_len[0]);
+		print_string(" and "); print_long(img_len[1]); print_string(" bytes\n");
 	} else {
 		print_string("No image in flash\n");
 	}

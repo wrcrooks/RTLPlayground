@@ -153,8 +153,11 @@ configure PoE.
     and each write is one transaction: address, register byte, then every data byte, so the image
     goes out as a single 8 or 21 KB write. The RTL8372's I²C master moves at most 16 bytes, so
     RTLPlayground would need its own bit-banged writer to do the same.
-  - Values are sent in memory order, which reads back as big-endian 32-bit registers: register
-    `0x18` reads `00 00 00 39` before a load, `0xec` reads `02 00 00 00`.
+  - Payloads go out in memory order, and Keil C51 stores an integer most significant byte first,
+    so the 32-bit `0x20` of the reset reaches register `0x1a` as `00 00 00 20`. The payloads for
+    `0xec` (`03 00 00 00`) and `0x18` (`00 00 20 39`) are literal byte tables in the stock image
+    at xdata `0xb5b0` and `0xb5ac`. Reads come back the other way round, least significant byte
+    first, which is where the status bits of `0xec` are.
 - **Loading the image with RTLPlayground.** `rtl8238.c` repeats the stock sequence at boot
   (before the saved configuration is applied) over a bit-banged I²C master on `GPIO46`/`GPIO47`,
   on machines with `.pse_rtl8238 = 1`. The image itself is the PoE controller vendor's firmware,
@@ -170,9 +173,20 @@ configure PoE.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
   Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).
-- **Under RTLPlayground, PoE is off.** RTLPlayground sends the RTL8238B nothing, and the chip
-  doesn't power ports by itself: with a PoE-powered device on port 1, the port stayed without
-  link and no register of `0x20` or `0x21` changed from the dump taken with nothing connected.
+- **PoE works once the image is loaded.** The chip powers nothing by itself: before the loader
+  existed, a PoE-powered device on port 1 left the port without link and changed no register.
+  With a build that carries the image, the boot-time load brings the chip up and the device
+  powers on and links. Registers seen at `0x20` before and after a load:
+
+  | Register | Before | After |
+  | --- | --- | --- |
+  | `0xec` | `02 00 00 00` | `24 00 00 00` (bits 2 and 5 set, bit 5 = load ok) |
+  | `0x18` | `00 00 00 39` | `00 00 00 3a` |
+  | `0x10` | `00 00 ff 0f` | `88 00 ff 0f` |
+
+  `0x21` answers the same except for `0x10`, which stays `00 00 ff 0f`: it is the half with no
+  ports wired. Registers come back least significant byte first, so the status bits are in the
+  first byte received.
 
 ### SFP
 
