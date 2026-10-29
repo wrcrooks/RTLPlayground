@@ -76,7 +76,7 @@ lacp_members:"active members",lacp_hint:"LACP: select candidate ports and press 
 lacp_actor:"Actor",lacp_partner:"Partner",lacp_rxstate:"RX state",lacp_rx:"LACPDUs received",lacp_psys:"Partner system",
 lag_clear_q:"Clear LAG {n}?",lag_clear_d:"All member ports return to normal operation.",
 e_title:"Energy Efficient Ethernet",e_adv:"Advertised",e_lp:"Link partner",e_active:"Active",e_enable:"Enable",
-nav_poe:"PoE",poe_title:"Power over Ethernet",poe_ctl:"Controller",poe_running:"Running",poe_stopped:"Not running",poe_total:"Total power",poe_status:"Status",poe_class:"Class",poe_volt:"Voltage",poe_curr:"Current",poe_pwr:"Power",poe_on:"Powered",poe_valid:"Detected",poe_none:"No device",poe_invalid:"Not a PoE device",poe_note:"Read-only: the controller powers valid PoE devices on its own. Turning ports on and off isn't supported yet.",poe_noimg:"The PoE controller isn't running, so no port supplies power. Its image is loaded at boot from the firmware build; see the device documentation.",
+nav_poe:"PoE",poe_enable:"PoE",poe_disabled:"Off",poe_title:"Power over Ethernet",poe_ctl:"Controller",poe_running:"Running",poe_stopped:"Not running",poe_total:"Total power",poe_status:"Status",poe_class:"Class",poe_volt:"Voltage",poe_curr:"Current",poe_pwr:"Power",poe_on:"Powered",poe_valid:"Detected",poe_none:"No device",poe_invalid:"Not a PoE device",poe_note:"The controller powers valid PoE devices on ports with PoE on. Changes apply at once; Save keeps them across restarts.",poe_noimg:"The PoE controller isn't running, so no port supplies power. Its image is loaded at boot from the firmware build; see the device documentation.",
 e_note:"Advertised and link-partner flags per speed: 100M, 1G, 2.5G. SFP ports do not support EEE.",
 e_idle:"idle",e_na:"n/a",
 bw_title:"Bandwidth limits",bw_h:"Mbit/s, 0.016-10000",bw_in:"Ingress limit",bw_out:"Egress limit",
@@ -199,7 +199,7 @@ m_note:"両方 = ポートの RX と TX をモニタポートにミラーしま�
 lag_hash:"ハッシュ:",lag_note:"起動設定に保存するには LAG に 1 つ以上のメンバーが必要です。メンバーなしで適用するとグループを解除します。",
 lag_clear_q:"LAG {n} を解除しますか?",lag_clear_d:"すべてのメンバーポートが通常動作に戻ります。",
 e_title:"Energy Efficient Ethernet",e_adv:"アドバタイズ",e_lp:"リンクパートナー",e_active:"有効",e_enable:"有効化",
-nav_poe:"PoE",poe_title:"PoE 給電",poe_ctl:"コントローラー",poe_running:"動作中",poe_stopped:"停止中",poe_total:"合計電力",poe_status:"状態",poe_class:"クラス",poe_volt:"電圧",poe_curr:"電流",poe_pwr:"電力",poe_on:"給電中",poe_valid:"検出",poe_none:"機器なし",poe_invalid:"PoE 非対応機器",poe_note:"表示のみ: コントローラーは有効な PoE 機器に自動で給電します。ポートごとのオン/オフはまだ対応していません。",poe_noimg:"PoE コントローラーが動作していないため、どのポートも給電しません。イメージは起動時にファームウェアから読み込まれます。デバイスのドキュメントを参照してください。",
+nav_poe:"PoE",poe_enable:"PoE",poe_disabled:"オフ",poe_title:"PoE 給電",poe_ctl:"コントローラー",poe_running:"動作中",poe_stopped:"停止中",poe_total:"合計電力",poe_status:"状態",poe_class:"クラス",poe_volt:"電圧",poe_curr:"電流",poe_pwr:"電力",poe_on:"給電中",poe_valid:"検出",poe_none:"機器なし",poe_invalid:"PoE 非対応機器",poe_note:"PoE がオンのポートでは、コントローラーが有効な PoE 機器に給電します。変更はすぐに反映され、保存すると再起動後も保持されます。",poe_noimg:"PoE コントローラーが動作していないため、どのポートも給電しません。イメージは起動時にファームウェアから読み込まれます。デバイスのドキュメントを参照してください。",
 e_note:"速度ごとのアドバタイズ/リンクパートナーのフラグ: 100M、1G、2.5G。SFP ポートは EEE に対応していません。",
 e_idle:"アイドル",e_na:"n/a",
 bw_title:"帯域制限",bw_h:"Mbit/s、0.016〜10000",bw_in:"入力制限",bw_out:"出力制限",
@@ -311,7 +311,7 @@ m_note:"双向 = 将该端口的 RX 和 TX 都镜像到目的端口。",m_none:"
 lag_hash:"哈希:",lag_note:"LAG 至少需要一个成员才能保存到启动配置；应用空组将清除该组。",
 lag_clear_q:"清除 LAG {n}?",lag_clear_d:"所有成员端口恢复正常工作。",
 e_title:"节能以太网 (EEE)",e_adv:"本端通告",e_lp:"链路伙伴",e_active:"已生效",e_enable:"启用",
-nav_poe:"PoE",poe_title:"以太网供电 (PoE)",poe_ctl:"控制器",poe_running:"运行中",poe_stopped:"未运行",poe_total:"总功率",poe_status:"状态",poe_class:"等级",poe_volt:"电压",poe_curr:"电流",poe_pwr:"功率",poe_on:"供电中",poe_valid:"已检测",poe_none:"无设备",poe_invalid:"非 PoE 设备",poe_note:"只读:控制器会自动为有效的 PoE 设备供电。暂不支持按端口开关。",poe_noimg:"PoE 控制器未运行,所有端口都不供电。其映像在启动时从固件中加载,详见设备文档。",
+nav_poe:"PoE",poe_enable:"PoE",poe_disabled:"关闭",poe_title:"以太网供电 (PoE)",poe_ctl:"控制器",poe_running:"运行中",poe_stopped:"未运行",poe_total:"总功率",poe_status:"状态",poe_class:"等级",poe_volt:"电压",poe_curr:"电流",poe_pwr:"功率",poe_on:"供电中",poe_valid:"已检测",poe_none:"无设备",poe_invalid:"非 PoE 设备",poe_note:"对已开启 PoE 的端口,控制器会为有效的 PoE 设备供电。更改立即生效;保存后重启也会保留。",poe_noimg:"PoE 控制器未运行,所有端口都不供电。其映像在启动时从固件中加载,详见设备文档。",
 e_note:"按速率显示本端/链路伙伴的通告标志: 100M、1G、2.5G。SFP 端口不支持 EEE。",
 e_idle:"空闲",e_na:"n/a",
 bw_title:"带宽限制",bw_h:"Mbit/s，0.016-10000",bw_in:"入方向限速",bw_out:"出方向限速",
@@ -423,7 +423,7 @@ m_note:"Ambos = duplica RX y TX del puerto al puerto monitor.",m_none:"Seleccion
 lag_hash:"Hash:",lag_note:"Un LAG necesita al menos un miembro para guardarse en la configuración de inicio; aplicar un grupo vacío lo borra.",
 lag_clear_q:"¿Borrar LAG {n}?",lag_clear_d:"Todos los puertos miembros vuelven a la operación normal.",
 e_title:"Ethernet de bajo consumo",e_adv:"Anunciado",e_lp:"Par de enlace",e_active:"Activo",e_enable:"Habilitar",
-nav_poe:"PoE",poe_title:"Alimentación por Ethernet",poe_ctl:"Controlador",poe_running:"En marcha",poe_stopped:"Detenido",poe_total:"Potencia total",poe_status:"Estado",poe_class:"Clase",poe_volt:"Tensión",poe_curr:"Corriente",poe_pwr:"Potencia",poe_on:"Alimentado",poe_valid:"Detectado",poe_none:"Sin dispositivo",poe_invalid:"No es un dispositivo PoE",poe_note:"Solo lectura: el controlador alimenta por sí solo los dispositivos PoE válidos. Aún no se pueden encender ni apagar puertos.",poe_noimg:"El controlador PoE no está en marcha, así que ningún puerto suministra energía. Su imagen se carga al arrancar desde la compilación del firmware; consulte la documentación del dispositivo.",
+nav_poe:"PoE",poe_enable:"PoE",poe_disabled:"Apagado",poe_title:"Alimentación por Ethernet",poe_ctl:"Controlador",poe_running:"En marcha",poe_stopped:"Detenido",poe_total:"Potencia total",poe_status:"Estado",poe_class:"Clase",poe_volt:"Tensión",poe_curr:"Corriente",poe_pwr:"Potencia",poe_on:"Alimentado",poe_valid:"Detectado",poe_none:"Sin dispositivo",poe_invalid:"No es un dispositivo PoE",poe_note:"El controlador alimenta los dispositivos PoE válidos en los puertos con PoE activado. Los cambios se aplican al instante; Guardar los conserva tras reiniciar.",poe_noimg:"El controlador PoE no está en marcha, así que ningún puerto suministra energía. Su imagen se carga al arrancar desde la compilación del firmware; consulte la documentación del dispositivo.",
 e_note:"Banderas anunciadas y del socio de enlace por velocidad: 100M, 1G, 2.5G. Los puertos SFP no soportan EEE.",
 e_idle:"inactivo",e_na:"n/d",
 bw_title:"Límites de ancho de banda",bw_h:"Mbit/s, 0.016-10000",bw_in:"Límite de entrada",bw_out:"Límite de salida",
@@ -538,7 +538,7 @@ iso_legend:"La cellule du port lui-même est toujours autorisée. Une port de co
 lag_hash:"Hachage:",lag_note:"Un groupe d'agrégation de Lien (LAG) nécessite au moins un membre pour être sauvegardé dans la configuration de démarrage; Utiliser un groupe vide fait office de remise à zero.",
 lag_clear_q:"Effacer l'agrégation {n}?",lag_clear_d:"Tous les ports membres vont redevenir normaux.",
 e_title:"Gestion énergétique des ports",e_adv:"Capacités",e_lp:"Capacité du partenaire",e_active:"Actif",e_enable:"Basse consommation",
-nav_poe:"PoE",poe_title:"Alimentation par Ethernet",poe_ctl:"Contrôleur",poe_running:"Actif",poe_stopped:"Arrêté",poe_total:"Puissance totale",poe_status:"État",poe_class:"Classe",poe_volt:"Tension",poe_curr:"Courant",poe_pwr:"Puissance",poe_on:"Alimenté",poe_valid:"Détecté",poe_none:"Aucun appareil",poe_invalid:"Appareil non PoE",poe_note:"Lecture seule : le contrôleur alimente seul les appareils PoE valides. L'activation et la désactivation par port ne sont pas encore prises en charge.",poe_noimg:"Le contrôleur PoE n'est pas actif, aucun port n'est alimenté. Son image est chargée au démarrage depuis le firmware ; voir la documentation de l'appareil.",
+nav_poe:"PoE",poe_enable:"PoE",poe_disabled:"Désactivé",poe_title:"Alimentation par Ethernet",poe_ctl:"Contrôleur",poe_running:"Actif",poe_stopped:"Arrêté",poe_total:"Puissance totale",poe_status:"État",poe_class:"Classe",poe_volt:"Tension",poe_curr:"Courant",poe_pwr:"Puissance",poe_on:"Alimenté",poe_valid:"Détecté",poe_none:"Aucun appareil",poe_invalid:"Appareil non PoE",poe_note:"Le contrôleur alimente les appareils PoE valides sur les ports où le PoE est activé. Les changements s'appliquent immédiatement ; Enregistrer les conserve après un redémarrage.",poe_noimg:"Le contrôleur PoE n'est pas actif, aucun port n'est alimenté. Son image est chargée au démarrage depuis le firmware ; voir la documentation de l'appareil.",
 e_note:"Capacité de l'hôte et des partenaires : 100M, 1G, 2.5G. Les ports SFP ne peuvent pas bénéficier de l'EEE.",
 e_idle:"Inactif",e_na:"N/A",
 bw_title:"Limitations de bande passante",bw_h:"Mbit/s, 0.016-10000",bw_in:"Limite entrante",bw_out:"Limite sortante",
@@ -669,7 +669,7 @@ lag_hash:"Hash:",lag_note:"Eine LAG braucht mindestens ein Mitglied, um in der S
 lag_clear_q:"LAG {n} auflösen?",lag_clear_d:"Alle Mitglieds-Ports kehren in den Normalbetrieb zurück.",
 lacp_heading:"LACP (802.3ad)",lag_mode:"Modus",lag_static:"Statisch",lacp_neg:"wird ausgehandelt",lacp_agg:"Aggregator",lacp_members:"aktive Mitglieder",lacp_hint:"LACP: Ports auswählen und Übernehmen drücken, um die Aushandlung zu starten",lacp_actor:"Lokal",lacp_partner:"Partner",lacp_rxstate:"Empfangsstatus",lacp_rx:"Empfangene LACPDUs",lacp_psys:"Partner-System",
 e_title:"Energy Efficient Ethernet",e_adv:"Angeboten",e_lp:"Gegenstelle",e_active:"Aktiv",e_enable:"Aktivieren",
-nav_poe:"PoE",poe_title:"Power over Ethernet",poe_ctl:"Controller",poe_running:"Läuft",poe_stopped:"Läuft nicht",poe_total:"Gesamtleistung",poe_status:"Status",poe_class:"Klasse",poe_volt:"Spannung",poe_curr:"Strom",poe_pwr:"Leistung",poe_on:"Versorgt",poe_valid:"Erkannt",poe_none:"Kein Gerät",poe_invalid:"Kein PoE-Gerät",poe_note:"Nur Anzeige: Der Controller versorgt gültige PoE-Geräte selbstständig. Ports ein- und ausschalten geht noch nicht.",poe_noimg:"Der PoE-Controller läuft nicht, kein Port liefert Strom. Sein Image wird beim Start aus dem Firmware-Build geladen, siehe Gerätedokumentation.",
+nav_poe:"PoE",poe_enable:"PoE",poe_disabled:"Aus",poe_title:"Power over Ethernet",poe_ctl:"Controller",poe_running:"Läuft",poe_stopped:"Läuft nicht",poe_total:"Gesamtleistung",poe_status:"Status",poe_class:"Klasse",poe_volt:"Spannung",poe_curr:"Strom",poe_pwr:"Leistung",poe_on:"Versorgt",poe_valid:"Erkannt",poe_none:"Kein Gerät",poe_invalid:"Kein PoE-Gerät",poe_note:"Der Controller versorgt gültige PoE-Geräte an Ports mit eingeschaltetem PoE. Änderungen wirken sofort; Speichern behält sie über einen Neustart hinaus.",poe_noimg:"Der PoE-Controller läuft nicht, kein Port liefert Strom. Sein Image wird beim Start aus dem Firmware-Build geladen, siehe Gerätedokumentation.",
 e_note:"Angebotene und von der Gegenstelle unterstützte Stufen je Geschwindigkeit: 100M, 1G, 2.5G. SFP-Ports unterstützen kein EEE.",
 e_idle:"inaktiv",e_na:"k. A.",
 bw_title:"Bandbreitenbegrenzung",bw_h:"Mbit/s, 0.016-10000",bw_in:"Eingangslimit",bw_out:"Ausgangslimit",
@@ -859,6 +859,7 @@ var CONF_CMDS=[
   /^lldp\s+(on|off)$/,
   /^bw\s+(in|out)\s+\d+\s+\S+$/,
   /^storm\s+\d+\s+(bcast|mcast|ucast|umcast)\s+(off|\d+\s+(pps|kbps))$/,
+  /^poe\s+port\s+[1-4]\s+(on|off)$/,
 ];
 function isConfCmd(line){
   for(var i=0;i<CONF_CMDS.length;i++)if(CONF_CMDS[i].test(line))return true;
@@ -2160,6 +2161,7 @@ tabHooks.eee={enter:function(){eeePoller.start()},leave:function(){eeePoller.sto
  * Detection codes: 4 = valid PoE device, 6 = open (nothing connected). Class
  * code 12 is class 0. */
 function poeStatus(p){
+  if(!p.en)return badge(t("poe_disabled"));
   if(p.on)return badge(t("poe_on"),"ok");
   if(p.det===4)return badge(t("poe_valid"));
   if(p.det===6||p.det===0)return badge(t("poe_none"));
@@ -2182,6 +2184,13 @@ function poeLoad(){
       [p.on?v.toFixed(1)+" V":"-",p.on?Math.round(ma)+" mA":"-",p.on?w.toFixed(2)+" W":"-"].forEach(function(x){
         var c=tr.insertCell();c.className="num";c.textContent=x;
       });
+      var sw=h("label",{class:"switch"},[
+        h("input",{type:"checkbox",onchange:function(){
+          postCmd("poe port "+p.portNum+" "+(this.checked?"on":"off"))
+            .then(function(){setTimeout(poeLoad,1500)}).catch(function(){});
+        }}),h("i")]);
+      sw.firstChild.checked=!!p.en;
+      tr.insertCell().appendChild(sw);
     });
     $("poe_total").textContent=s.loaded?total.toFixed(2)+" W":"-";
   });
@@ -2500,7 +2509,7 @@ var CONF_OVERWRITE=[
   /^stp\s+(port\s+\d{1,2}|lag\s+[1-4])\s+(edge|cost|prio|guard|filter|p2p)\b/,
   /^igmp\b/,/^mtu\s+\d{1,2}\b/,/^storm\s+\d{1,2}\s+(bcast|mcast|ucast|umcast)\b/,
 ];
-var CONF_TOGGLE=[/^(syslog)\s+(on|off)$/,/^(ntp)\s+(on|off)$/,/^(stp)\s+(on|off)$/,/^(lldp)\s+(on|off)$/,/^(stp\s+(port\s+\d{1,2}|lag\s+[1-4]))\s+(on|off)$/];
+var CONF_TOGGLE=[/^(syslog)\s+(on|off)$/,/^(ntp)\s+(on|off)$/,/^(stp)\s+(on|off)$/,/^(lldp)\s+(on|off)$/,/^(stp\s+(port\s+\d{1,2}|lag\s+[1-4]))\s+(on|off)$/,/^(poe\s+port\s+[1-4])\s+(on|off)$/];
 function mergeConf(base,texts){
   var conf=base.slice();
   function drop(rx){conf=conf.filter(function(c){return!rx.test(c)})}

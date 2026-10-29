@@ -220,18 +220,21 @@ static bool pse_write(uint8_t dev, uint8_t reg)
 	return true;
 }
 
-// Write one byte. Returns false if the device doesn't answer; whether it
-// acknowledges the data byte is in the return of i2c_write_byte(), which
-// callers that expect a reset to cut the transfer short ignore.
-static bool pse_write_byte(uint8_t dev, uint8_t reg, uint8_t v, bool need_ack)
+#define PSE_NO_ANSWER	0
+#define PSE_ACK		1
+#define PSE_NACK	2
+
+// Write the byte in pse_buf[0] to a register. Callers that expect a reset to
+// cut the transfer short accept PSE_NACK.
+static uint8_t pse_write_byte(uint8_t dev, uint8_t reg)
 {
 	__xdata bool ack;
 
 	if (!pse_begin(dev, reg))
-		return false;
-	ack = i2c_write_byte(v);
+		return PSE_NO_ANSWER;
+	ack = i2c_write_byte(pse_buf[0]);
 	i2c_stop();
-	return ack || !need_ack;
+	return ack ? PSE_ACK : PSE_NACK;
 }
 
 // Read 4 bytes from a register into pse_buf, in the order received. The chip
@@ -326,7 +329,8 @@ void pse_load(void) __banked
 	// Step 0 of the stock init: reset the whole chip with bit 5 of the reset
 	// register 0x1a. The registers are bytes, as on a TPS23861, so this is a
 	// one-byte write; the chip may not acknowledge it as it resets.
-	if (!pse_write_byte(PSE_ADDR_0, 0x1a, 0x20, false)) {
+	pse_buf[0] = 0x20;
+	if (pse_write_byte(PSE_ADDR_0, 0x1a) == PSE_NO_ANSWER) {
 		print_string("PSE: no answer from the RTL8238B at 0x20\n");
 		return;
 	}
@@ -407,15 +411,18 @@ bool pse_port_set(uint8_t port, bool on) __banked
 	print_string(on ? " on" : " off");
 	print_string(", mode 0x12 = "); print_byte(mode);
 	print_string(", detect 0x14 = "); print_byte(det); write_char('\n');
-	return pse_write_byte(PSE_ADDR_0, 0x12, mode, true)
-	       && pse_write_byte(PSE_ADDR_0, 0x14, det, true);
+	pse_buf[0] = mode;
+	if (pse_write_byte(PSE_ADDR_0, 0x12) != PSE_ACK)
+		return false;
+	pse_buf[0] = det;
+	return pse_write_byte(PSE_ADDR_0, 0x14) == PSE_ACK;
 }
 
 bool pse_read_ports(void) __banked
 {
 	__xdata uint8_t i, ch;
 	__xdata uint8_t det[4];
-	__xdata uint8_t on;
+	__xdata uint8_t on, mode;
 
 	i2c_setup();
 	if (!pse_read(PSE_ADDR_0, 0x0c))
@@ -425,6 +432,7 @@ bool pse_read_ports(void) __banked
 	if (!pse_read(PSE_ADDR_0, 0x10))
 		return false;
 	on = pse_buf[0];
+	mode = pse_buf[2];	// register 0x12
 
 	for (i = 0; i < PSE_PORTS; i++) {
 		ch = machine.pse_channel[i];
@@ -432,6 +440,7 @@ bool pse_read_ports(void) __banked
 			pse_ports[i].det = 0;
 			pse_ports[i].cls = 0;
 			pse_ports[i].on = 0;
+			pse_ports[i].en = 0;
 			pse_ports[i].i_raw = 0;
 			pse_ports[i].v_raw = 0;
 			continue;
@@ -439,6 +448,7 @@ bool pse_read_ports(void) __banked
 		pse_ports[i].det = det[ch] & 0x0f;
 		pse_ports[i].cls = det[ch] >> 4;
 		pse_ports[i].on = (on >> (4 + ch)) & 1;
+		pse_ports[i].en = (mode >> (ch << 1)) & 0x03 ? 1 : 0;
 		if (!pse_read(PSE_ADDR_0, 0x30 + (ch << 2)))
 			return false;
 		pse_ports[i].i_raw = pse_buf[0] | ((uint16_t)pse_buf[1] << 8);

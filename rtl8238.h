@@ -29,6 +29,7 @@
  *   det, cls: register 0x0c + channel, low nibble detection (4 = valid PD,
  *             6 = open), high nibble class (0xc = class 0, 1-8 = class 1-8)
  *   on:       bit 4 + channel of register 0x10
+ *   en:       PoE enabled: the channel's operating mode in 0x12 isn't 00 (off)
  *   i_raw:    low 16 bits of register 0x30 + 4 * channel, raw * 125 / 4096 mA
  *   v_raw:    high 16 bits of it, & 0x7fff, raw / 512 V
  */
@@ -36,6 +37,7 @@ struct pse_port {
 	uint8_t det;
 	uint8_t cls;
 	uint8_t on;
+	uint8_t en;
 	uint16_t i_raw;
 	uint16_t v_raw;
 };

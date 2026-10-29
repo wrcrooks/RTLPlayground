@@ -190,8 +190,11 @@ configure PoE.
 - **Per-port on/off** (stock: bank 14 `0xcbbc` -> bank 19 `0x7903`): off sets the channel's field
   in `0x12` to `00` and clears its bit in `0x14`; on sets `11` (auto) and the bit. Auto only
   powers a port after detecting a valid PoE device. Tested on port 1: off drops it to 0 V and
-  takes the link down; on brings the device back within seconds. Console: `poe port <1-4> on|off`.
-  The setting isn't saved, so a restart turns every port back on.
+  takes the link down; on brings the device back within seconds. Console: `poe port <1-4> on|off`;
+  the web UI's PoE tab has a switch per port that runs it. Like other settings, it is kept across
+  restarts once saved (Save in the web UI): the saved `poe port <n> off` is replayed at boot,
+  right after the image load. Tested: a saved `poe port 1 off` leaves port 1 unpowered after a
+  restart while the other ports stay on.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
   Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).

@@ -356,6 +356,8 @@ void send_poe(void)
 			itoa_html(pse_ports[i].cls);
 			slen += strtox(outbuf + slen, ",\"on\":");
 			bool_to_html(pse_ports[i].on);
+			slen += strtox(outbuf + slen, ",\"en\":");
+			bool_to_html(pse_ports[i].en);
 			slen += strtox(outbuf + slen, ",\"i\":");
 			short_hex_to_html(pse_ports[i].i_raw);
 			slen += strtox(outbuf + slen, ",\"v\":");
