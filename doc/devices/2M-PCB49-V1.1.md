@@ -48,8 +48,8 @@ Tested on one switch, flashed with a CH341A clip:
   this board, so nothing shows that the button is held.
 - Firmware updates through the web UI work; they leave the MAC sector alone.
 
-- Both SFP+ ports: modules are detected, their EEPROMs and readings are read, and a fibre between
-  the two cages (two FS SFP-10GLRM-31) links at 10G and passes frames both ways (see [SFP](#sfp)).
+- Both SFP+ ports: modules are detected, their EEPROMs and readings are read, and a DAC in port 6
+  links at 10G and carries a VLAN trunk uplink (see [SFP](#sfp)).
 
 Not known yet: whether PoE works (see [PoE](#poe)).
 
@@ -223,16 +223,18 @@ inputs and reading the EEPROM from each cage's configured bus:
 | Module detect (low = module in) | GPIO38 | GPIO37 |
 | EEPROM I²C SDA | GPIO39 | GPIO41 |
 | EEPROM I²C SCL | GPIO40 | GPIO40 |
+| MAC / SerDes | 8 / 1 | 3 / 0 |
 | LOS | not found | not found |
 
 Both cages differ from the 2M-PCB43-V1.1 (detect GPIO50 / GPIO30, and the two SDA lines the other
 way round). No GPIO input changed with the LOS of a module without fibre, so LOS may not be wired
 to a GPIO.
 
-The SerDes mapping (port 5 on SerDes 0, port 6 on SerDes 1) is right: with a module in each cage
-and a fibre jumper between them, both ports linked at 10G, and 100 broadcast frames sent out of
-each port arrived at the other, with no errors. (For this test, port isolation kept the two ports
-from forwarding to each other or to the RJ45 ports, so the loop couldn't flood the switch.)
+The left cage is on MAC 8 / SerDes 1 and the right one on MAC 3 / SerDes 0, as on the SWTG024AS
+boards (`SWGT024_V2_0_MANAGED` has the same tables). Found with a DAC in the right cage: with the
+mapping the other way round, its link showed up on port 5 while port 5 reported no module. A fibre
+jumper between the two cages can't tell the two mappings apart (frames sent out of one port arrive
+at the other either way), so the earlier loop test didn't catch it.
 
 ### LEDs
 
@@ -248,6 +250,8 @@ found by routing pads to a lit source in turn, with `regset` on the LED mux regi
 | Port 2 amber | 12 | | Port 4 amber | 24 |
 | Port 2 green | 15 | | Port 4 green | 25 |
 | Port 5 (left SFP) | 26 | | Port 6 (right SFP) | 6 |
+
+The SFP LEDs follow the MAC: pad 26 shows MAC 8, pad 6 MAC 3.
 
 Pads 0-7 are disabled at reset (`LED_GLB_IO_EN` bits 0-7), so `POE_2G040210GSM_init.c` enables
 pad 6.
