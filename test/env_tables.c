@@ -104,6 +104,7 @@ bool     gpio_pin_test(uint8_t pin) { (void)pin; return false; }
 __xdata struct pse_port pse_ports[PSE_PORTS];
 __xdata uint8_t pse_loaded;
 bool     pse_read_ports(void) { return false; }
+bool     pse_port_set(uint8_t port, bool on) { (void)port; (void)on; return false; }
 void     phy_read(uint8_t phy_id, uint8_t dev_id, uint16_t reg) { (void)phy_id; (void)dev_id; (void)reg; }
 void     phy_write(uint8_t phy_id, uint8_t dev_id, uint16_t reg, uint16_t val) { (void)phy_id; (void)dev_id; (void)reg; (void)val; }
 void     phy_reset(uint8_t port) { (void)port; }

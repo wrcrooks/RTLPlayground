@@ -153,8 +153,9 @@ configure PoE.
     and each write is one transaction: address, register byte, then every data byte, so the image
     goes out as a single 8 or 21 KB write. The RTL8372's I²C master moves at most 16 bytes, so
     RTLPlayground would need its own bit-banged writer to do the same.
-  - Payloads go out in memory order, and Keil C51 stores an integer most significant byte first,
-    so the 32-bit `0x20` of the reset reaches register `0x1a` as `00 00 00 20`. The payloads for
+  - The reset is bit 5 of register `0x1a`: a one-byte write of `0x20`, which the chip may not
+    acknowledge as it resets. (The stock `0x18` write, `00 00 20 39`, also puts `0x20` into
+    `0x1a`.) The payloads for
     `0xec` (`03 00 00 00`) and `0x18` (`00 00 20 39`) are literal byte tables in the stock image
     at xdata `0xb5b0` and `0xb5ac`. Reads come back the other way round, least significant byte
     first, which is where the status bits of `0xec` are.
@@ -179,8 +180,18 @@ configure PoE.
   - `0x30 + 4 * ch`: low 16 bits current, `raw * 125 / 4096` mA; high 16 bits `& 0x7fff`
     voltage, `raw / 512` V. A small class 0 device on port 1 read 41 mA at 52 V.
   - The web UI's PoE tab (shown when `information.json` has `"poe":1`) reads these through
-    `/poe.json` every 3 s and converts them. It is read-only: the stock per-port enable/disable
-    write isn't decoded yet, and the controller powers valid devices on its own.
+    `/poe.json` every 3 s and converts them.
+- **The registers are bytes, laid out like a TI TPS23861's**, read and written in address order:
+  `0x0c + ch` channel discovery, `0x10` power status (bit `ch` enable, bit `4 + ch` power good),
+  `0x12` operating mode (2 bits per channel, `11` = auto, `00` = off), `0x13` disconnect enable,
+  `0x14` detect/class enable (bit `ch` = detect), `0x1a` reset, `0x1b` revision (`0x39` before a
+  load, `0x3a` after), `0x30 + 4 * ch` current and voltage. The stock firmware's 4-byte accesses
+  are just four of these in a row.
+- **Per-port on/off** (stock: bank 14 `0xcbbc` -> bank 19 `0x7903`): off sets the channel's field
+  in `0x12` to `00` and clears its bit in `0x14`; on sets `11` (auto) and the bit. Auto only
+  powers a port after detecting a valid PoE device. Tested on port 1: off drops it to 0 V and
+  takes the link down; on brings the device back within seconds. Console: `poe port <1-4> on|off`.
+  The setting isn't saved, so a restart turns every port back on.
 - **Protocol on other boards** (unconfirmed here): RTL8238-based PoE is usually driven over a
   UART, 115200 8N1, 12-byte frames (`cmd, seq, 9 data bytes, checksum`), Realtek's dialect of the
   Broadcom PoE protocol ([realtek-poe#25](https://github.com/Hurricos/realtek-poe/issues/25)).

@@ -46,5 +46,6 @@ extern __xdata uint8_t pse_loaded;
 void pse_load(void) __banked;
 void pse_status(void) __banked;
 bool pse_read_ports(void) __banked;
+bool pse_port_set(uint8_t port, bool on) __banked;
 
 #endif

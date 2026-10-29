@@ -2039,10 +2039,15 @@ void cmd_parser(void) __banked
 		} else if (cmd_compare(0, "gpio")) {
 			print_gpio_status();
 		} else if (cmd_compare(0, "poe")) {
-			if (cmd_words_len > 1 && cmd_compare(1, "load"))
+			if (cmd_words_len > 1 && cmd_compare(1, "load")) {
 				pse_load();
-			else
+			} else if (cmd_words_len == 4 && cmd_compare(1, "port")
+				   && (cmd_compare(3, "on") || cmd_compare(3, "off"))) {
+				if (!pse_port_set(cmd_buffer[cmd_words_b[2]] - '0', cmd_compare(3, "on")))
+					print_string("poe port <1-4> on|off: failed\n");
+			} else {
 				pse_status();
+			}
 		} else if (cmd_compare(0, "leds")) {
 			leds_dump();
 		} else if (cmd_compare(0, "regget")) {

@@ -220,6 +220,20 @@ static bool pse_write(uint8_t dev, uint8_t reg)
 	return true;
 }
 
+// Write one byte. Returns false if the device doesn't answer; whether it
+// acknowledges the data byte is in the return of i2c_write_byte(), which
+// callers that expect a reset to cut the transfer short ignore.
+static bool pse_write_byte(uint8_t dev, uint8_t reg, uint8_t v, bool need_ack)
+{
+	__xdata bool ack;
+
+	if (!pse_begin(dev, reg))
+		return false;
+	ack = i2c_write_byte(v);
+	i2c_stop();
+	return ack || !need_ack;
+}
+
 // Read 4 bytes from a register into pse_buf, in the order received. The chip
 // sends the least significant byte first, so the status bits are in pse_buf[0].
 static bool pse_read(uint8_t dev, uint8_t reg)
@@ -309,13 +323,11 @@ void pse_load(void) __banked
 	}
 	i2c_setup();
 
-	// Step 0 of the stock init: reset the whole chip. The stock firmware
-	// stores the payload as a 32-bit 0x20, which Keil C51 lays out most
-	// significant byte first, so it goes on the wire as 00 00 00 20.
-	pse_set(0x00, 0x00, 0x00, 0x20);
-	if (!pse_write(PSE_ADDR_0, 0x1a)) {
-		print_string("PSE: reset write to 0x1a refused at byte ");
-		print_byte(pse_fail); write_char('\n');
+	// Step 0 of the stock init: reset the whole chip with bit 5 of the reset
+	// register 0x1a. The registers are bytes, as on a TPS23861, so this is a
+	// one-byte write; the chip may not acknowledge it as it resets.
+	if (!pse_write_byte(PSE_ADDR_0, 0x1a, 0x20, false)) {
+		print_string("PSE: no answer from the RTL8238B at 0x20\n");
 		return;
 	}
 	delay(100);
@@ -365,6 +377,38 @@ void pse_load(void) __banked
 	pse_loaded = pse_buf[0] & 0x20 ? 1 : 0;
 	print_string(pse_loaded ? " - load ok\n" : " - load failed\n");
 	delay(10);
+}
+
+/*
+ * Turn PoE on or off for front port 1-4, as the stock firmware's port settings
+ * page does (bank 19 0x7903): the channel's 2-bit field in the operating mode
+ * register 0x12 is set to 3 (auto: detect, classify, then power) or 0 (off),
+ * and its detect enable bit in 0x14 to 1 or 0.
+ */
+bool pse_port_set(uint8_t port, bool on) __banked
+{
+	__xdata uint8_t ch, mode, det;
+
+	if (port < 1 || port > PSE_PORTS)
+		return false;
+	ch = machine.pse_channel[port - 1];
+	if (ch > 3)
+		return false;
+	i2c_setup();
+
+	if (!pse_read(PSE_ADDR_0, 0x12))
+		return false;
+	mode = (pse_buf[0] & ~(0x03 << (ch << 1))) | ((on ? 0x03 : 0x00) << (ch << 1));
+	if (!pse_read(PSE_ADDR_0, 0x14))
+		return false;
+	det = (pse_buf[0] & ~(0x01 << ch)) | ((on ? 0x01 : 0x00) << ch);
+
+	print_string("PSE: port "); write_char('0' + port);
+	print_string(on ? " on" : " off");
+	print_string(", mode 0x12 = "); print_byte(mode);
+	print_string(", detect 0x14 = "); print_byte(det); write_char('\n');
+	return pse_write_byte(PSE_ADDR_0, 0x12, mode, true)
+	       && pse_write_byte(PSE_ADDR_0, 0x14, det, true);
 }
 
 bool pse_read_ports(void) __banked
