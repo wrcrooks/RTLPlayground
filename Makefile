@@ -129,10 +129,12 @@ SRCS += \
 	rtl837x_lldp.c \
 	rtl837x_storm.c \
 	rtl837x_lacp.c \
-	rtl837x_trap.c
+	rtl837x_trap.c \
+	rtl8238.c
 SRCS += \
 	httpd/httpd.c \
-	httpd/page_impl.c
+	httpd/page_impl.c \
+	httpd/page_poe.c
 SRCS += \
 	uip/timer.c \
 	uip/uip.c \

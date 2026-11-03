@@ -318,6 +318,9 @@ void send_basic_info(void)
 		}
 	}
 	char_to_html('"');
+	// The PoE tab is shown only with a PoE controller: page_poe.c
+	if (machine.pse_rtl8238)
+		slen += strtox(outbuf + slen, ",\"poe\":1");
 
 	char_to_html('}');
 }

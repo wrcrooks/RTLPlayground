@@ -46,6 +46,12 @@ static void gpio_mux_setup(uint8_t pin) __banked
 			sfr_mask_data(1, 0x01, 0x00);
 			reg_write_m(RTL837X_PIN_MUX_1);	
 			break;
+		case GPIO47_I2C_SDA0:
+			// Bit 9-10 0b00 -> GPIO
+			reg_read_m(RTL837X_PIN_MUX_1);
+			sfr_mask_data(1, 0x06, 0x00);
+			reg_write_m(RTL837X_PIN_MUX_1);
+			break;
 		case GPIO50_I2C_SCL2_UART1_TX:
 			// Bit 15-16 0b00 -> GPIO
 			reg_read_m(RTL837X_PIN_MUX_1);

@@ -20,7 +20,8 @@
 	defined(MACHINE_PCB_K0402WS_V2) || \
 	defined(MACHINE_PCB_K0402WS_V3) || \
 	defined(MACHINE_2G5F4_10G2_V1_01) || \
-	defined(MACHINE_FNS1200P)
+	defined(MACHINE_FNS1200P) || \
+	defined(MACHINE_POE_2G040210GSM)
 void machine_custom_init(void) __banked
 {
 	reg_bit_set(RTL837X_REG_LED_GLB_IO_EN, 6);

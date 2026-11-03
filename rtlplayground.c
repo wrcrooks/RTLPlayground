@@ -34,6 +34,7 @@
 #include "httpd/page_impl.h"
 #include "boot.h"
 #include "sfp.h"
+#include "rtl8238.h"
 
 extern __code const struct machine machine;
 extern __xdata uint32_t flash_size;
@@ -1749,6 +1750,9 @@ void main(void)
 		flash_default_config();
 		flash_init(machine.flash_sio ? 0 : 1);
 	}
+
+	if (machine.pse_rtl8238)
+		pse_load();
 
 	execute_config();
 	// After the config so the entry lands in the final management VLAN
