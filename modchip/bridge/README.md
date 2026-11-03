@@ -17,7 +17,21 @@ From the repository root:
 ```
 make -f modchip/bridge/Makefile MACHINE=SWGT024_V2_0_UNMANAGED LAYOUT=compact   # 512 KiB flash
 make -f modchip/bridge/Makefile MACHINE=SWGT024_V2_0_MANAGED                    # 2 MiB flash
+make -f modchip/bridge/Makefile MACHINE=POE_2G040210GSM                         # MokerLink PoE, 2 MiB
 ```
+
+**PoE.** The POE-2G040210GSM's RTL8238B PoE controller needs an image uploaded at every boot, and only
+the 8051 reaches it (bit-banged I²C on GPIO46/47, `rtl8238.c`). The bridge runs the load before it
+answers the first `HELLO`, and the host drives PoE through the `POE_*` requests below. The image is
+the PoE controller vendor's firmware and is not in this repository. Add it, taken from the switch's own
+stock flash, to the built image:
+
+```
+tools/add_pse_image.py output/bridge-POE_2G040210GSM/bridge-<git>-POE_2G040210GSM.bin \
+    img0.bin img1.bin bridge-with-pse.bin
+```
+
+Without it the bridge works as usual and PoE stays off.
 
 ## Tests
 
@@ -47,6 +61,9 @@ chip, keeps the SerDes and SFPs working, and tunnels frames and SFR-only operati
 its UART. The RP2350 does everything else.
 
 ## The link: UART on header T5
+
+On the POE-2G040210GSM the same UART0 is on header T9 (pin 1 U0TXD, 2 GND, 3 U0RXD, 4 3.3 V; pins 1
+and 3 not yet confirmed). The mod chip for that switch reaches T9 over four wires.
 
 | T5 pin | Signal | Mod chip |
 |---|---|---|
@@ -125,6 +142,9 @@ does lose a byte, the message is dropped and counted in `link_errors`.
 | `0x27 TBL_READ` | `ctrl:4 count:1` | per entry: `ctrl:4 out_a:4 out_b:4 out_c:4 data_0:4` | Runs `count` (1-64) table reads, from the entry in `ctrl` (`TBL_CTRL` as written, read command) onwards: `TBL_CTRL` after the read, `L2_DATA_OUT_A/B/C` and `TBL_DATA_0`. Saves the host a write, a poll and the reads per entry |
 | `0x28 SDS_CONFIG` | `sds:1 mode:1` | | `sds_config()`: SerDes `sds` (≤ 1) to `SDS_*` mode `mode` |
 | `0x29 STAT_READ` | `pmask:2 n:1 counter:n` | per port in `pmask`, ascending, per counter: `value:8` | MIB counters (`STAT_GET`), `n` 1-16, each the 64-bit value of `STAT_V_HIGH`:`STAT_V_LOW`. Saves the host four round trips per counter |
+| `0x2A POE_READ` | | `loaded:1 n:1`, per port 1-`n`: `det:1 cls:1 on:1 en:1 i_raw:2 v_raw:2` | The PoE controller's readings, raw as in `rtl8238.h`: V = `v_raw & 0x7fff` / 512, mA = `i_raw` × 125 / 4096. `n` is 0 while the controller has no image. Unknown request without `HELLO_POE` |
+| `0x2B POE_PORT` | `port:1 on:1` | | `pse_port_set()`: PoE on (1) or off (0) on front port 1-4 |
+| `0x2C POE_LOAD` | | `loaded:1` | Reloads the controller's image; takes about 10 s, with its progress as `LOG` messages first |
 | `0x30 FLASH_READ` | `addr:4 len:2` | `data` | `len` 1-512; `addr` 4-byte aligned |
 | `0x31 FLASH_ERASE` | `addr:4` | | One 4 KiB sector, at or above `upload_start` |
 | `0x32 FLASH_WRITE` | `addr:4 data` | | 1-256 bytes within one page, at or above `upload_start` |
@@ -150,7 +170,7 @@ The **hello** payload holds, in order:
 - image size, 4 bytes;
 - upload start, 4 bytes;
 - CPU port, minimum port, maximum port and SFP count, 1 byte each;
-- flags, 1 byte: RTL8373, N variant, compact layout;
+- flags, 1 byte: RTL8373, N variant, compact layout, PoE controller (`HELLO_POE`);
 - machine name, 30 bytes;
 - firmware version, the rest of the message.
 
@@ -172,6 +192,7 @@ Several engines can be reached from both sides, so each has one owner.
 | CPU-port NIC (0x7840-0x7890), interrupt status/mask (0x5f34, 0x5f84, 0x5f88, 0x7854) | 8051 | none |
 | SerDes, PHY (MDIO), flash | 8051 (SFR only) | through requests |
 | SoC I²C master (SFP EEPROMs), SFP GPIOs | 8051 | `SFP_READ` |
+| PoE controller (RTL8238B, GPIO46/47) | 8051 | `POE_READ`, `POE_PORT`, `POE_LOAD` |
 | System LED | either | `SET_LED`, or the register directly when the 8051 isn't using it |
 | Everything else: VLAN, L2, ACL and MIB table engines, port, trap, mirror, storm and bandwidth registers | RP2350 | I²C on T3, or `REG_READ`/`REG_WRITE` |
 

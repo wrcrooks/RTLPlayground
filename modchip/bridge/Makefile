@@ -59,7 +59,8 @@ SRCS = \
 	rtl837x_phy.c \
 	rtl837x_pins.c \
 	rtl837x_port.c \
-	rtl837x_trap.c
+	rtl837x_trap.c \
+	rtl8238.c
 
 OBJS = $(addprefix $(BUILDDIR)/,$(notdir $(SRCS:.c=.rel)))
 VPATH = modchip/bridge machine .

@@ -37,6 +37,7 @@
 #include "phy.h"
 #include "boot.h"
 #include "sfp.h"
+#include "rtl8238.h"
 #include "version.h"
 #include "bridge.h"
 #include "bridge_proto.h"
@@ -237,6 +238,8 @@ static void put_hello(void)
 #ifdef LAYOUT_COMPACT
 	flags |= HELLO_LAYOUT_COMPACT;
 #endif
+	if (machine.pse_rtl8238)
+		flags |= HELLO_POE;
 	link_put(flags);
 	for (uint8_t i = 0; i < sizeof(machine.machine_name); i++)
 		link_put(machine.machine_name[i]);
@@ -454,6 +457,34 @@ static void flash_id(uint8_t seq, __xdata uint8_t *p)
 }
 
 
+/*
+ * The PoE controller's per-port readings, raw as rtl8238.h describes them.
+ * No ports while the controller has no image (loaded 0)
+ */
+static void poe_read(uint8_t seq)
+{
+	uint8_t i;
+
+	if (pse_loaded && !pse_read_ports()) {
+		reply(REQ_POE_READ, seq, ST_FAILED);
+		return;
+	}
+	link_begin(REQ_POE_READ | REPLY, seq);
+	link_put(ST_OK);
+	link_put(pse_loaded);
+	link_put(pse_loaded ? PSE_PORTS : 0);
+	for (i = 0; pse_loaded && i < PSE_PORTS; i++) {
+		link_put(pse_ports[i].det);
+		link_put(pse_ports[i].cls);
+		link_put(pse_ports[i].on);
+		link_put(pse_ports[i].en);
+		link_put16(pse_ports[i].i_raw);
+		link_put16(pse_ports[i].v_raw);
+	}
+	link_end();
+}
+
+
 static void handle_request(uint16_t len)
 {
 	uint8_t type = MSG[0];
@@ -587,6 +618,37 @@ static void handle_request(uint16_t len)
 		}
 		sds_config(p[0], p[1]);
 		reply(type, seq, ST_OK);
+		return;
+
+	case REQ_POE_READ:
+	case REQ_POE_PORT:
+	case REQ_POE_LOAD:
+		if (!machine.pse_rtl8238) {
+			reply(type, seq, ST_UNKNOWN);
+			return;
+		}
+		if (type == REQ_POE_READ) {
+			if (n != 0)
+				break;
+			poe_read(seq);
+		} else if (type == REQ_POE_PORT) {
+			if (n != 2)
+				break;
+			if (p[0] < 1 || p[0] > PSE_PORTS || p[1] > 1) {
+				reply(type, seq, ST_BAD_ARGUMENT);
+				return;
+			}
+			reply(type, seq, pse_port_set(p[0], p[1]) ? ST_OK : ST_FAILED);
+		} else {
+			if (n != 0)
+				break;
+			// Its progress goes out as LOG messages before the reply
+			pse_load();
+			link_begin(type | REPLY, seq);
+			link_put(ST_OK);
+			link_put(pse_loaded);
+			link_end();
+		}
 		return;
 
 	case REQ_FLASH_ID:
@@ -1056,6 +1118,9 @@ void main(void)
 	port_l2_setup();
 	setup_i2c();
 	setup_sfp_gpio();
+	// Before the first HELLO: the host finds PoE running, or knows it won't
+	if (machine.pse_rtl8238)
+		pse_load();
 
 	set_sys_led_state(SYS_LED_ON);
 	print_string("bridge ready\n");

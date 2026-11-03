@@ -30,6 +30,9 @@
 #define REQ_TBL_READ		0x27	/* ctrl:4 count:1 (1-64) -> count x (ctrl:4 out_a:4 out_b:4 out_c:4 data_0:4) */
 #define REQ_SDS_CONFIG		0x28	/* sds:1 mode:1, as sds_config() */
 #define REQ_STAT_READ		0x29	/* pmask:2 n:1 (1-16) counter:n -> per port, per counter: value:8 */
+#define REQ_POE_READ		0x2a	/* -> loaded:1 n:1, per port: det:1 cls:1 on:1 en:1 i_raw:2 v_raw:2 */
+#define REQ_POE_PORT		0x2b	/* port:1 (1-4) on:1, as pse_port_set() */
+#define REQ_POE_LOAD		0x2c	/* -> loaded:1; reloads the PoE controller, takes about 10 s */
 #define REQ_FLASH_READ		0x30	/* addr:4 len:2 (1-512) -> data */
 #define REQ_FLASH_ERASE		0x31	/* addr:4, one 4 KiB sector */
 #define REQ_FLASH_WRITE		0x32	/* addr:4 data (1-256 bytes) */
@@ -60,5 +63,6 @@
 #define HELLO_RTL8373		0x01
 #define HELLO_N_VARIANT		0x02
 #define HELLO_LAYOUT_COMPACT	0x04
+#define HELLO_POE		0x08	/* an RTL8238B PoE controller, REQ_POE_* (machine.pse_rtl8238) */
 
 #endif
