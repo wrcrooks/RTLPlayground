@@ -470,7 +470,7 @@ void port_l2_setup(void) __banked
 			mask = PMASK_CPU | PMASK_9;
 		REG_SET(RTL837X_PORT_ISOLATION_BASE + idx, mask);
 	}
-	// When maximim entries learned, then simply flood the packet
+	// Frames from new sources beyond a port's limit are dropped (doc/l2.md)
 	reg_bit_set(RTL837X_L2_LRN_PORT_CONSTRT_ACT, 0);
 
 }
