@@ -60,7 +60,7 @@ v_mgmt_q:"Set VLAN {n} as management VLAN?",
 v_mgmt_d:"The switch will start tagging its own traffic with that VLAN. If the port you are connected through does not carry it, this page becomes unreachable and the setting can only be undone over the console.",
 l2_title:"MAC address table",l2_filter:"filter...",l2_flush:"Flush learned entries",l2_static:"static",
 l2_learned:"learned",l2_loading:"loading...",l2_failed:"load failed",l2_entries:"entries",
-l2_del_t:"Delete entry",l2_flush_q:"Flush all learned MAC entries?",
+l2_del_t:"Delete entry",l2_flush_q:"Flush all learned MAC entries?",l2_pin_t:"Make static, on this port (saved with the config)",l2_add:"Add static entry",l2_mac_err:"Enter a unicast MAC address, e.g. 00:11:22:33:44:55",l2_vlan_err:"VLAN must be 1-4094",l2_sec_title:"Port security",l2_sticky:"Sticky",l2_limit:"Learning limit",l2_unlimited:"no limit",l2_limit_err:"The limit must be 0-4159, or empty for none",l2_sec_note:"A sticky port turns every address it learns into a static entry on that port; Save keeps them across restarts. The learning limit caps how many addresses a port learns at a time; frames from further addresses are still forwarded, as unknown.",
 m_title:"Port mirroring",m_active:"active",m_monitor:"Monitor port",m_mirror:"Mirror",m_both:"Both",
 m_note:"Both = mirror RX and TX of the port to the monitor port.",m_none:"Select at least one mirrored port",
 iso_title:"Port isolation",iso_from:"From port",iso_to:"To port",iso_all:"Allow all",
@@ -191,7 +191,7 @@ v_mgmt_q:"VLAN {n} を管理 VLAN に設定しますか?",
 v_mgmt_d:"スイッチは自身のトラフィックにこの VLAN のタグを付けるようになります。接続中のポートがこの VLAN を通さない場合、このページにアクセスできなくなり、コンソールからしか元に戻せません。",
 l2_title:"MAC アドレステーブル",l2_filter:"フィルタ...",l2_flush:"学習エントリを消去",l2_static:"静的",
 l2_learned:"学習",l2_loading:"読み込み中...",l2_failed:"読み込み失敗",l2_entries:"エントリ",
-l2_del_t:"エントリを削除",l2_flush_q:"学習した MAC エントリをすべて消去しますか?",
+l2_del_t:"エントリを削除",l2_flush_q:"学習した MAC エントリをすべて消去しますか?",l2_pin_t:"このポートに静的登録 (設定と一緒に保存)",l2_add:"静的エントリを追加",l2_mac_err:"ユニキャスト MAC アドレスを入力してください (例: 00:11:22:33:44:55)",l2_vlan_err:"VLAN は 1-4094 です",l2_sec_title:"ポートセキュリティ",l2_sticky:"スティッキー",l2_limit:"学習上限",l2_unlimited:"上限なし",l2_limit_err:"上限は 0-4159、空欄で無制限です",l2_sec_note:"スティッキーポートは学習したアドレスをすべてそのポートの静的エントリにします。保存すると再起動後も保持されます。学習上限はポートが一度に学習するアドレス数を制限します。それ以上のアドレスからのフレームも未知として転送されます。",
 m_title:"ポートミラーリング",m_active:"有効",m_monitor:"モニタポート",m_mirror:"ミラー",m_both:"両方",
 m_note:"両方 = ポートの RX と TX をモニタポートにミラーします。",m_none:"ミラー元ポートを 1 つ以上選択してください",
 lag_hash:"ハッシュ:",lag_note:"起動設定に保存するには LAG に 1 つ以上のメンバーが必要です。メンバーなしで適用するとグループを解除します。",
@@ -305,7 +305,7 @@ v_mgmt_q:"将 VLAN {n} 设为管理 VLAN?",
 v_mgmt_d:"交换机将开始为自身流量打上该 VLAN 标签。如果您所连接的端口不属于该 VLAN，本页面将无法访问，且只能通过控制台撤销此设置。",
 l2_title:"MAC 地址表",l2_filter:"筛选...",l2_flush:"清除学习条目",l2_static:"静态",
 l2_learned:"动态学习",l2_loading:"加载中...",l2_failed:"加载失败",l2_entries:"条",
-l2_del_t:"删除条目",l2_flush_q:"清除所有动态学习的 MAC 条目?",
+l2_del_t:"删除条目",l2_flush_q:"清除所有动态学习的 MAC 条目?",l2_pin_t:"固定为此端口的静态条目 (随配置保存)",l2_add:"添加静态条目",l2_mac_err:"请输入单播 MAC 地址,例如 00:11:22:33:44:55",l2_vlan_err:"VLAN 必须为 1-4094",l2_sec_title:"端口安全",l2_sticky:"粘滞",l2_limit:"学习上限",l2_unlimited:"无上限",l2_limit_err:"上限为 0-4159,留空表示无上限",l2_sec_note:"粘滞端口会把学到的每个地址变成该端口上的静态条目;保存后重启也会保留。学习上限限制端口同时学习的地址数;来自更多地址的帧仍会作为未知地址转发。",
 m_title:"端口镜像",m_active:"已启用",m_monitor:"镜像目的端口",m_mirror:"镜像",m_both:"双向",
 m_note:"双向 = 将该端口的 RX 和 TX 都镜像到目的端口。",m_none:"请至少选择一个被镜像端口",
 lag_hash:"哈希:",lag_note:"LAG 至少需要一个成员才能保存到启动配置；应用空组将清除该组。",
@@ -419,7 +419,7 @@ v_mgmt_q:"¿Establecer VLAN {n} como VLAN de gestión?",
 v_mgmt_d:"El switch empezará a etiquetar su propio tráfico con esa VLAN. Si el puerto por el que te conectas no la transporta, esta página dejará de ser accesible y el ajuste solo podrá deshacerse por la consola.",
 l2_title:"Tabla de direcciones MAC",l2_filter:"filtrar...",l2_flush:"Vaciar entradas aprendidas",l2_static:"estática",
 l2_learned:"aprendida",l2_loading:"cargando...",l2_failed:"error de carga",l2_entries:"entradas",
-l2_del_t:"Eliminar entrada",l2_flush_q:"¿Vaciar todas las entradas MAC aprendidas?",
+l2_del_t:"Eliminar entrada",l2_flush_q:"¿Vaciar todas las entradas MAC aprendidas?",l2_pin_t:"Fijar como estática en este puerto (se guarda con la configuración)",l2_add:"Añadir entrada estática",l2_mac_err:"Introduzca una MAC unicast, p. ej. 00:11:22:33:44:55",l2_vlan_err:"La VLAN debe ser 1-4094",l2_sec_title:"Seguridad de puertos",l2_sticky:"Sticky",l2_limit:"Límite de aprendizaje",l2_unlimited:"sin límite",l2_limit_err:"El límite debe ser 0-4159, o vacío para ninguno",l2_sec_note:"Un puerto sticky convierte cada dirección que aprende en una entrada estática en ese puerto; Guardar las conserva tras reiniciar. El límite de aprendizaje acota cuántas direcciones aprende un puerto a la vez; las tramas de más direcciones se siguen reenviando como desconocidas.",
 m_title:"Duplicación de puertos",m_active:"activa",m_monitor:"Puerto monitor",m_mirror:"Duplicar",m_both:"Ambos",
 m_note:"Ambos = duplica RX y TX del puerto al puerto monitor.",m_none:"Selecciona al menos un puerto duplicado",
 lag_hash:"Hash:",lag_note:"Un LAG necesita al menos un miembro para guardarse en la configuración de inicio; aplicar un grupo vacío lo borra.",
@@ -532,7 +532,7 @@ v_mgmt_q:"Mettre ce VLAN {n} en tant que VLAN de management?",
 v_mgmt_d:"Ce commutateur commencera par taguer son propre trafic avec ce VLAN. Si le port avec lequel vous êtes connecté ne le permet pas, cette page deviendra inaccessible et les paramètres ne pourront plus être changés que via la console.",
 l2_title:"Table des adresses MAC",l2_filter:"filtre...",l2_flush:"Effacer les entrées apprises",l2_static:"static",
 l2_learned:"appris",l2_loading:"chargement...",l2_failed:"chargement non réussi",l2_entries:"entrées",
-l2_del_t:"Supprimer l'entrée",l2_flush_q:"Effacer toutes les entrées MAC apprises?",
+l2_del_t:"Supprimer l'entrée",l2_flush_q:"Effacer toutes les entrées MAC apprises?",l2_pin_t:"Rendre statique sur ce port (enregistré avec la configuration)",l2_add:"Ajouter une entrée statique",l2_mac_err:"Saisissez une adresse MAC unicast, p. ex. 00:11:22:33:44:55",l2_vlan_err:"Le VLAN doit être entre 1 et 4094",l2_sec_title:"Sécurité des ports",l2_sticky:"Sticky",l2_limit:"Limite d'apprentissage",l2_unlimited:"sans limite",l2_limit_err:"La limite doit être entre 0 et 4159, ou vide pour aucune",l2_sec_note:"Un port sticky transforme chaque adresse apprise en entrée statique sur ce port ; Enregistrer les conserve après un redémarrage. La limite d'apprentissage borne le nombre d'adresses qu'un port apprend à la fois ; les trames d'autres adresses sont toujours transmises comme inconnues.",
 m_title:"Duplication de ports",m_active:"actif",m_monitor:"Port de supervision",m_mirror:"Mirroir",m_both:"RX&TX",
 m_note:"RX&TX = duplique RX et TX du port vers le port de supervision.",m_none:"Selectionnez au moins un port à dupliquer",
 iso_title:"Isolation des ports",iso_from:"Du port",iso_to:"Au port",iso_all:"Tout autoriser",
@@ -651,7 +651,7 @@ v_mgmt_q:"VLAN {n} als Management-VLAN setzen?",
 v_mgmt_d:"Der Switch versieht dann seinen eigenen Verkehr mit diesem VLAN-Tag. Führt der Port, über den du verbunden bist, dieses VLAN nicht, ist diese Seite nicht mehr erreichbar und die Einstellung lässt sich nur noch über die serielle Konsole zurücknehmen.",
 l2_title:"MAC-Adresstabelle",l2_filter:"filtern...",l2_flush:"Gelernte Einträge löschen",l2_static:"statisch",
 l2_learned:"gelernt",l2_loading:"lädt...",l2_failed:"Laden fehlgeschlagen",l2_entries:"Einträge",
-l2_del_t:"Eintrag löschen",l2_flush_q:"Alle gelernten MAC-Einträge löschen?",
+l2_del_t:"Eintrag löschen",l2_flush_q:"Alle gelernten MAC-Einträge löschen?",l2_pin_t:"Statisch an diesem Port festlegen (wird mit der Konfiguration gespeichert)",l2_add:"Statischen Eintrag hinzufügen",l2_mac_err:"Bitte eine Unicast-MAC eingeben, z. B. 00:11:22:33:44:55",l2_vlan_err:"VLAN muss 1-4094 sein",l2_sec_title:"Port-Sicherheit",l2_sticky:"Sticky",l2_limit:"Lernlimit",l2_unlimited:"kein Limit",l2_limit_err:"Das Limit muss 0-4159 sein, leer für keines",l2_sec_note:"Ein Sticky-Port macht jede gelernte Adresse zu einem statischen Eintrag an diesem Port; Speichern behält sie über einen Neustart. Das Lernlimit begrenzt, wie viele Adressen ein Port gleichzeitig lernt; Frames weiterer Adressen werden weiterhin als unbekannt weitergeleitet.",
 m_title:"Port-Spiegelung",m_active:"aktiv",m_monitor:"Monitor-Port",m_mirror:"Spiegeln",m_both:"Beide",
 m_note:"Beide = RX und TX des Ports auf den Monitor-Port spiegeln.",m_none:"Mindestens einen zu spiegelnden Port wählen",
 iso_title:"Port-Isolation",iso_from:"Von Port",iso_to:"Zu Port",iso_all:"Alle erlauben",
@@ -835,6 +835,8 @@ var CONF_CMDS=[
   /^bw\s+(in|out)\s+\d{1,2}\s+\S+$/,
   /^storm\s+\d{1,2}\s+(bcast|mcast|ucast|umcast)\s+(off|\d{1,8}\s+(pps|kbps))$/,
   /^poe\s+port\s+[1-4]\s+(on|off)$/,
+  /^l2\s+static\s+[0-9a-f]{2}([:-][0-9a-f]{2}){5}\s+\d{1,4}\s+(\d+|d)$/i,
+  /^l2\s+limit\s+\d+\s+(\d+|off)$/,/^l2\s+sticky\s+\d+\s+(on|off)$/,
 ];
 function isConfCmd(line){
   for(var i=0;i<CONF_CMDS.length;i++)if(CONF_CMDS[i].test(line))return true;
@@ -1660,8 +1662,13 @@ function l2Render(){
     tr.insertCell().textContent=e.vlan;
     tr.insertCell().textContent=ty;
     var dc=tr.insertCell();
+    // A learned entry can be pinned to its port: an "l2 static" command, saved with the config
+    if(e.pport!=="CPU"&&!e.stat&&!e.lag)dc.appendChild(h("button",{class:"ctl",text:"\ud83d\udccc",title:t("l2_pin_t"),onclick:function(){
+      postCmd(l2StaticCmd(e.mac,e.vlan,e.pport)).then(function(){e.stat=true;l2Render();}).catch(function(){});
+    }}));
+    // A static entry goes through "l2 static ... d", so the saved config forgets it too
     if(e.pport!=="CPU")dc.appendChild(h("button",{class:"ctl",text:"\u2715",title:t("l2_del_t"),onclick:function(){
-      getJSON("/l2_del.json?idx="+e.idx).then(function(){
+      (e.stat?postCmd(l2StaticCmd(e.mac,e.vlan,"d")):getJSON("/l2_del.json?idx="+e.idx)).then(function(){
         l2Rows=l2Rows.filter(function(x){return x!==e});
         l2Render();
       }).catch(function(){});
@@ -1684,7 +1691,46 @@ $("l2flush").addEventListener("click",function(){
     postCmd("l2 forget").then(function(){setTimeout(l2Fetch,500)}).catch(function(){});
   });
 });
-tabHooks.l2={enter:function(){needPorts(function(){l2Fetch()})},leave:function(){l2Gen++}};
+function l2StaticCmd(mac,vlan,port){return "l2 static "+mac.toLowerCase().replace(/-/g,":")+" "+vlan+" "+port}
+$("l2add").addEventListener("click",function(){
+  var mac=$("l2mac").value.trim(),vlan=parseInt($("l2vlan").value,10);
+  if(!/^[0-9a-f]{2}([:-][0-9a-f]{2}){5}$/i.test(mac)||(parseInt(mac.slice(0,2),16)&1)){toast(t("l2_mac_err"),"err");return;}
+  if(!(vlan>=1&&vlan<=4094)){toast(t("l2_vlan_err"),"err");return;}
+  postCmd(l2StaticCmd(mac,vlan,$("l2port").value)).then(function(){$("l2mac").value="";setTimeout(l2Fetch,300);}).catch(function(){});
+});
+/* Port security: the running state is the saved config with this session's
+ * commands merged in, as Save would write it */
+function l2SecLoad(){
+  return Promise.all([getText("/config").catch(function(){return""}),getText("/cmd_log").catch(function(){return""})]).then(function(r){
+    var cur=r[0].replace(/\0[\s\S]*$/,"").split(/\r?\n/).map(function(l){return l.trim().replace(/\s+/g," ")}).filter(Boolean);
+    var sticky={},limit={};
+    mergeConf(cur,[r[1].replace(/\0[\s\S]*$/,"")]).forEach(function(l){
+      var m;
+      if((m=l.match(/^l2 sticky (\d{1,2}) on$/)))sticky[m[1]]=true;
+      if((m=l.match(/^l2 limit (\d{1,2}) (\d+)$/)))limit[m[1]]=m[2];
+    });
+    var tb=$("l2sectable").tBodies[0];tb.innerHTML="";
+    S.ports.forEach(function(p){
+      var tr=tb.insertRow(),n=String(p.portNum);
+      var st=h("input",{type:"checkbox"});st.checked=!!sticky[n];
+      var lim=h("input",{class:"in",type:"number",min:"0",max:"4159",placeholder:t("l2_unlimited"),style:"width:8em"});
+      lim.value=limit[n]||"";
+      tr.insertCell().textContent=n;
+      tr.insertCell().appendChild(st);
+      tr.insertCell().appendChild(lim);
+      tr.insertCell().appendChild(h("button",{class:"ctl",text:t("c_apply"),onclick:function(){
+        var v=lim.value.trim();
+        if(v!==""&&!(/^\d+$/.test(v)&&+v<=4159)){toast(t("l2_limit_err"),"err");return;}
+        postCmds(["l2 sticky "+n+(st.checked?" on":" off"),"l2 limit "+n+" "+(v===""?"off":v)]).catch(function(){});
+      }}));
+    });
+  });
+}
+tabHooks.l2={enter:function(){needPorts(function(){
+  var sel=$("l2port");
+  if(!sel.options.length)S.ports.forEach(function(p){sel.appendChild(h("option",{value:p.portNum,text:p.portNum}))});
+  l2Fetch();l2SecLoad();
+})},leave:function(){l2Gen++}};
 
 function buildMirror(){
   var sel=$("mport");
@@ -2302,8 +2348,9 @@ var CONF_OVERWRITE=[
   /^stp\s+(prio|hello|maxage|fwd|txhold|version)\b/,
   /^stp\s+(port\s+\d{1,2}|lag\s+[1-4])\s+(edge|cost|prio|guard|filter|p2p)\b/,
   /^igmp\b/,/^mtu\s+\d{1,2}\b/,/^storm\s+\d{1,2}\s+(bcast|mcast|ucast|umcast)\b/,
+  /^l2\s+static\s+\S+\s+\d{1,4}\b/,/^l2\s+limit\s+\d{1,2}\b/,
 ];
-var CONF_TOGGLE=[/^(syslog)\s+(on|off)$/,/^(ntp)\s+(on|off)$/,/^(stp)\s+(on|off)$/,/^(stp\s+(port\s+\d{1,2}|lag\s+[1-4]))\s+(on|off)$/,/^(poe\s+port\s+[1-4])\s+(on|off)$/];
+var CONF_TOGGLE=[/^(syslog)\s+(on|off)$/,/^(ntp)\s+(on|off)$/,/^(stp)\s+(on|off)$/,/^(stp\s+(port\s+\d{1,2}|lag\s+[1-4]))\s+(on|off)$/,/^(poe\s+port\s+[1-4])\s+(on|off)$/,/^(l2\s+sticky\s+\d{1,2})\s+(on|off)$/];
 function mergeConf(base,texts){
   var conf=base.slice();
   function drop(rx){conf=conf.filter(function(c){return!rx.test(c)})}
@@ -2313,6 +2360,9 @@ function mergeConf(base,texts){
       if(!line)return;
       var m;
       if((m=line.match(/^vlan (\d{1,4}) d$/))){drop(new RegExp("^vlan "+m[1]+"( |$)"));return;}
+      // one spelling per MAC, so a later line for the same MAC and VLAN replaces it
+      if(/^l2 static /i.test(line))line=line.toLowerCase().replace(/-/g,":");
+      if((m=line.match(/^l2 static (\S+) (\d{1,4}) d$/))){drop(new RegExp("^l2 static "+m[1]+" "+m[2]+" "));return;}
       if((m=line.match(/^lag (\d) d$/))){drop(new RegExp("^lag(hash)? "+m[1]+"( |$)"));return;}
       if((m=line.match(/^eee (on|off)(?: (\d{1,2}))?(?: (?:100m|1g|2g5))?$/))){
         if(m[2])drop(new RegExp("^eee (on|off) "+m[2]+"\\b"));

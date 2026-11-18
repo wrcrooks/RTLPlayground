@@ -67,6 +67,9 @@ const struct machine machine = {
 };
 struct machine_runtime machine_detected = { .isRTL8373 = 1 };
 
+/* cmd_parser.c: the history is live once the startup config has run */
+char save_cmd = 1;
+
 /* ---- firmware state the modules read or write ---- */
 uint8_t  outbuf[TCP_OUTBUF_SIZE];
 uint16_t slen;

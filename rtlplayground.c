@@ -9,6 +9,7 @@
 #include "rtl837x_flash.h"
 #include "rtl837x_pins.h"
 #include "rtl837x_phy.h"
+#include "rtl837x_l2sec.h"
 #include "rtl837x_port.h"
 #include "rtl837x_trap.h"
 #include "rtl837x_nic.h"
@@ -1204,6 +1205,7 @@ static void handle_tick(void)
 		lacp_timers();
 	health_phase(HEALTH_PH_STP);
 	lldp_tick();
+	l2_sticky_tick();
 	health_phase(HEALTH_LLDP);
 	cabletest_tick();
 }
