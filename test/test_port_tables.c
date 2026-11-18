@@ -12,11 +12,14 @@
 #include "rtl837x_common.h"
 #include "rtl837x_regs.h"
 #include "rtl837x_port.h"
+#include "rtl837x_l2sec.h"
 #include "machine.h"
 #include <test/support.h>
 #include <test/hw_mock.h>
 
 extern struct machine_runtime machine_detected;
+extern uint8_t cmd_history[CMD_HISTORY_SIZE];
+extern uint16_t cmd_history_ptr;
 
 /* VLAN entry as vlan_create() lays it out: bit 25 valid, bits 0-9 members,
  * bits 10-19 the untag set, which is every port not in the tagged set (the
@@ -134,6 +137,80 @@ static void t_static_mgmt(void)
 	CHECK(hw_l2_count() == 1, "removing an entry that is not there changes nothing");
 }
 
+static void t_static_port(void)
+{
+	printf("[test] a static entry on a front port, then removed\n");
+	hw_reset();
+	uint8_t mac[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x66 };
+	l2_static_port = 5;
+	port_l2_static(mac, 20, false);
+	const struct hw_l2 *e = hw_l2_find(mac, 20);
+	CHECK(e != 0, "entry present in VLAN 20");
+	if (e) {
+		uint8_t m[6]; uint16_t vid, p; bool valid, st, mc;
+		hw_l2_decode(e, m, &vid, &p, &valid, &st, &mc);
+		CHECK(valid && st && !mc && p == 5, "valid, static, on logical port 5");
+	}
+	hw_l2_put(0x100, mac, 30, 2, false);
+	l2_static_port = 7;
+	port_l2_static(mac, 30, false);
+	e = hw_l2_find(mac, 30);
+	if (e) {
+		uint8_t m[6]; uint16_t vid, p; bool valid, st, mc;
+		hw_l2_decode(e, m, &vid, &p, &valid, &st, &mc);
+		CHECK(st && p == 7 && hw_l2_count() == 2, "a learned entry for the same MAC and VLAN is replaced");
+	}
+	port_l2_static(mac, 20, true);
+	CHECK(hw_l2_find(mac, 20) == 0 && hw_l2_find(mac, 30) != 0, "removal deletes only the VLAN 20 entry");
+}
+
+static void t_sticky(void)
+{
+	printf("[test] sticky: learned entries on a sticky port become static and saved\n");
+	hw_reset(); env_reset(); out_reset();
+	const uint8_t a[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x01 };
+	const uint8_t b[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x02 };
+	const uint8_t c[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x03 };
+	const uint8_t d[6] = { 0x02, 0xaa, 0xbb, 0xcc, 0xdd, 0xee };
+	hw_l2_put(0x010, a, 1, 2, false);
+	hw_l2_put(0x020, b, 1, 2, true);
+	hw_l2_put(0x030, c, 1, 5, false);
+	hw_l2_put(0xff0, d, 100, 2, false);
+
+	l2_sticky_pmask = 0;
+	unsigned long w = hw_writes;
+	l2_sticky_tick();
+	CHECK(hw_writes == w, "no sticky port: the table is not touched");
+
+	l2_sticky_pmask = 1 << 2;
+	l2_sticky_next = 0;
+	for (int i = 0; i < 4; i++)
+		l2_sticky_tick();
+	uint8_t m[6]; uint16_t vid, p; bool valid, st, mc;
+	hw_l2_decode(hw_l2_find(a, 1), m, &vid, &p, &valid, &st, &mc);
+	CHECK(st && p == 2, "learned entry on the sticky port is static now, same port");
+	hw_l2_decode(hw_l2_find(d, 100), m, &vid, &p, &valid, &st, &mc);
+	CHECK(st && p == 2 && vid == 100, "also the one at the end of the table, VLAN kept");
+	hw_l2_decode(hw_l2_find(c, 1), m, &vid, &p, &valid, &st, &mc);
+	CHECK(!st, "learned entry on another port stays learned");
+	CHECK(hw_l2_count() == 4, "no entry added or lost");
+
+	cmd_history[cmd_history_ptr] = 0;
+	CHECK(!strcmp((char *)cmd_history, "l2 static 00:11:22:33:44:01 1 3\nl2 static 02:aa:bb:cc:dd:ee 100 3\n"),
+	      "both land in the history as l2 static lines, front port 3");
+	CHECK(strstr(out_buf, "L2: sticky 00:11:22:33:44:01 vlan 1 port 3") != 0, "and are reported");
+
+	uint16_t h = cmd_history_ptr;
+	for (int i = 0; i < 8; i++)
+		l2_sticky_tick();
+	CHECK(cmd_history_ptr == h, "a second pass adds nothing: they are static already");
+
+	hw_reset();
+	l2_sticky_tick();
+	CHECK(hw_l2_count() == 0, "an empty table is left alone");
+	l2_sticky_pmask = 0;
+}
+
 static void t_flush(void)
 {
 	printf("[test] flushing a port forgets its learned entries only\n");
@@ -174,6 +251,8 @@ int main(void)
 	t_pvid();
 	t_l2mc();
 	t_static_mgmt();
+	t_static_port();
+	t_sticky();
 	t_flush();
 	t_lag();
 	printf("\n%d checks, %d failed\n", tests_run, tests_failed);
