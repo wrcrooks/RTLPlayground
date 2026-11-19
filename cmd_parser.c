@@ -516,6 +516,9 @@ static void parse_l2_security(void)
 {
 	if (cmd_compare(1, "static")) {
 		if (cmd_words_len != 5 || !parse_mac(cmd_words_b[2]) || (mac_parse_result[0] & 0x01)
+		    || !(mac_parse_result[0] | mac_parse_result[1] | mac_parse_result[2]
+			 | mac_parse_result[3] | mac_parse_result[4] | mac_parse_result[5])
+		    || !memcmp(mac_parse_result, uip_ethaddr.addr, 6)
 		    || !atoi_short(cmd_words_b[3]) || !atoi_results_short || atoi_results_short > 4094)
 			goto err_static;
 		if (cmd_buffer[cmd_words_b[4]] == 'd' && cmd_buffer[cmd_words_b[4] + 1] == NUL) {
@@ -528,7 +531,7 @@ static void parse_l2_security(void)
 		port_l2_static(mac_parse_result, atoi_results_short, false);
 		return;
 err_static:
-		cmd_error("l2 static <unicast mac> <vlan 1-4094> <port>|d\n");
+		cmd_error("l2 static <unicast mac, not the switch's> <vlan 1-4094> <port>|d\n");
 		return;
 	}
 
