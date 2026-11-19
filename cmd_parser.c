@@ -16,7 +16,9 @@
 #include "rtl837x_sfr.h"
 #include "rtl837x_stp.h"
 #include "rtl837x_lacp.h"
+#ifdef RTLP_ACL
 #include "rtl837x_acl.h"
+#endif
 #include "rtl837x_igmp.h"
 #include "rtl837x_bandwidth.h"
 #include "rtl837x_lldp.h"
@@ -673,10 +675,12 @@ err:
 }
 
 
+#ifdef RTLP_ACL
 void parse_acl(void)
 {
 	acl_cmd();
 }
+#endif
 
 
 void parse_vlan(void)
@@ -2090,8 +2094,10 @@ void cmd_parser(void) __banked
 			parse_lag();
 		} else if (cmd_compare(0, "laghash")) {
 			parse_lag_hash();
+#ifdef RTLP_ACL
 		} else if (cmd_compare(0, "acl")) {
 			parse_acl();
+#endif
 		} else if (cmd_compare(0, "sds")) {
 			print_reg(RTL837X_REG_SDS_MODES);
 			write_char('\n');

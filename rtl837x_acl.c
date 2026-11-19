@@ -430,6 +430,26 @@ void acl_poll(void) __banked
 	print_string("ACL interrupt\n");
 }
 
+/* The switch's registers went back to their defaults without this module
+ * knowing (the mod chip's 8051 restarted): forget the rules, which the saved
+ * configuration sets up again */
+void acl_reset(void) __banked
+{
+	uint8_t i, k;
+
+	for (i = 0; i < ACL_HW_RULES / 8; i++)
+		acl_used[i] = 0;
+	for (i = 0; i < ACL_HW_RULES; i++)
+		acl_rule_tmpl[i] = 0;
+	for (k = 0; k < ACL_RANGE_KINDS; k++) {
+		for (i = 0; i < ACL_RANGES; i++)
+			acl_range[k].owner[i] = 0;
+		acl_range[k].bits = 0;
+		acl_range[k].need = 0;
+	}
+	acl_unmatch_drop = 0;
+}
+
 void acl_counter_reset(void) __banked
 {
 	REG_SET(RTL837X_ACL_LOG_RST, 0xffffffff);

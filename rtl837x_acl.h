@@ -144,6 +144,7 @@ uint8_t acl_rule_is_and(uint8_t idx) __banked;
 void acl_unmatch_set(void) __banked;
 void acl_counter_reset(void) __banked;
 void acl_poll(void) __banked;
+void acl_reset(void) __banked;
 void acl_cmd(void) __banked;
 
 #endif
