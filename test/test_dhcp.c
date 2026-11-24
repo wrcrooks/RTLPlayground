@@ -18,6 +18,9 @@
 #include "dhcp.h"
 #include "uip.h"
 
+/* timer.c reads it; the parser tests let no time pass */
+volatile uint32_t ticks;
+
 /* Defined in dhcp.c, which has no header entry for them */
 extern struct dhcp_state dhcp_state;
 void parse_dhcp(void);

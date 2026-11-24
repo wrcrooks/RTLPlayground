@@ -90,7 +90,7 @@ $(BUILDDIR)/test_igmp: test_igmp.c $(SRCROOT)/rtl837x_igmp.c | $(BUILDDIR)
 
 # dhcp.c is compiled UNMODIFIED from the firmware tree. It fills the 32-bit
 # transaction id through a byte pointer (SDCC bug 4070), which gcc flags.
-$(BUILDDIR)/test_dhcp: test_dhcp.c $(SRCROOT)/dhcp.c | $(BUILDDIR)
+$(BUILDDIR)/test_dhcp: test_dhcp.c $(SRCROOT)/dhcp.c $(SRCROOT)/timer.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) -Wno-incompatible-pointer-types $^ -o $@ $(LDFLAGS)
 
 # httpd/httpd.c and uip/uip.c are compiled UNMODIFIED from the firmware tree;
