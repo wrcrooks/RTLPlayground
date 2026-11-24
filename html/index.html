@@ -676,6 +676,7 @@ button.danger{background:var(--bad);color:#fff;border-color:transparent}
 
   function load(){
     return getJSON("/dot1x.json").then(function(s){
+      s.ports.sort(function(a,b){return a.port-b.port});
       if(!built){
         $("x-on").checked=!!s.enabled;
         $("x-ip").value=s.radius;$("x-port").value=s.radius_port;$("x-reauth").value=s.reauth||"";
