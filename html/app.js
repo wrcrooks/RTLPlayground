@@ -2482,6 +2482,13 @@ var CONF_CMDS = [
     /^bw\s+(in|out)\s+\d+\s+\S+$/,
     /^storm\s+\d+\s+(bcast|mcast|ucast|umcast)\s+(off|\d+\s+(pps|kbps))$/,
     /^acl\s+\d{1,2}\s+\S.*$/,
+    /^dot1x\s+(on|off)$/,
+    /^dot1x\s+radius\s+(\d{1,3}\.){3}\d{1,3}(\s+\d{1,5})?$/,
+    /^dot1x\s+secret\s+\S.*$/,
+    /^dot1x\s+reauth\s+(\d+|off)$/,
+    /^dot1x\s+port\s+\d\s+(auto|force-auth|force-unauth|mab\s+(on|off))$/,
+    /^snmp\s+(on|off)$/,
+    /^snmp\s+(community|location|contact)\s+\S.*$/,
     /^acl\s+meter\s+\d{1,2}\s+\d+\s+(kbps|pps)\s+\d+(\s+ifg)?$/,
     /^acl\s+field\s+\d{1,2}\s+(off(\s+\d{1,3})?|(raw|llc|ipv4|arp|ipv6|ip|l4)\s+\d{1,3})$/,
     /^acl\s+default\s+(permit|drop(\s+\d)+)$/,
@@ -5228,9 +5235,10 @@ var CONF_OVERWRITE = [
     /^stp\s+(port\s+\d{1,2}|lag\s+[1-4])\s+(edge|cost|prio|guard|filter|p2p)\b/,
     /^igmp\b/, /^mtu\s+\d{1,2}\b/, /^storm\s+\d{1,2}\s+(bcast|mcast|ucast|umcast)\b/,
     /^acl\s+\d{1,2}\b/, /^acl\s+(meter|field)\s+\d{1,2}\b/, /^acl\s+counter\s+\d{1,2}\s+(mode|width)\b/, /^acl\s+gpio\s+([0-3]|polarity)\b/, /^acl\s+default\b/,
+    /^dot1x\s+(radius|secret|reauth)\b/, /^snmp\s+(community|location|contact)\b/,
     /^l2\s+static\s+\S+\s+\d{1,4}\b/, /^l2\s+limit\s+\d{1,2}\b/,
 ];
-var CONF_TOGGLE = [/^(syslog)\s+(on|off)$/, /^(ntp)\s+(on|off)$/, /^(stp)\s+(on|off)$/, /^(lldp)\s+(on|off)$/, /^(stp\s+(port\s+\d{1,2}|lag\s+[1-4]))\s+(on|off)$/];
+var CONF_TOGGLE = [/^(syslog)\s+(on|off)$/, /^(ntp)\s+(on|off)$/, /^(dot1x)\s+(on|off)$/, /^(dot1x\s+port\s+\d\s+mab)\s+(on|off)$/, /^(snmp)\s+(on|off)$/, /^(stp)\s+(on|off)$/, /^(lldp)\s+(on|off)$/, /^(stp\s+(port\s+\d{1,2}|lag\s+[1-4]))\s+(on|off)$/];
 
 function l2StaticNorm(line) {
     // one spelling per MAC, so a later line for the same MAC and VLAN replaces it
@@ -5346,6 +5354,8 @@ function mergeConf(base, texts) {
                 conf.push(line);
                 return;
             }
+            if ((m = line.match(/^dot1x port (\d) (auto|force-auth|force-unauth)$/)))
+                drop(new RegExp("^dot1x port " + m[1] + " (auto|force-auth|force-unauth)$"));
             for (var i = 0; i < CONF_TOGGLE.length; i++) {
                 if ((m = line.match(CONF_TOGGLE[i]))) {
                     drop(new RegExp("^" + m[1] + " (on|off)$"));

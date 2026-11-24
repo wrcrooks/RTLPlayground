@@ -16,6 +16,8 @@
 #include "rtl837x_stp.h"
 #include "rtl837x_lacp.h"
 #include "rtl837x_acl.h"
+#include "dot1x.h"
+#include "snmp.h"
 #include "rtl837x_igmp.h"
 #include "rtl837x_bandwidth.h"
 #include "rtl837x_lldp.h"
@@ -2110,6 +2112,10 @@ void cmd_parser(void) __banked
 			parse_lag();
 		} else if (cmd_compare(0, "laghash")) {
 			parse_lag_hash();
+		} else if (cmd_compare(0, "dot1x")) {
+			dot1x_cmd();
+		} else if (cmd_compare(0, "snmp")) {
+			snmp_cmd();
 		} else if (cmd_compare(0, "acl")) {
 			parse_acl();
 		} else if (cmd_compare(0, "sds")) {

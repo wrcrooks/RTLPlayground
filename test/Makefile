@@ -38,7 +38,9 @@ TESTS = $(BUILDDIR)/test_cmd_editor \
         $(BUILDDIR)/test_lacp \
         $(BUILDDIR)/test_igmp \
         $(BUILDDIR)/test_acl \
-        $(BUILDDIR)/test_dhcp
+        $(BUILDDIR)/test_dhcp \
+        $(BUILDDIR)/test_dot1x \
+        $(BUILDDIR)/test_snmp
 
 # The table tests link the register mock and one environment file; stub/
 # stands in for the two headers a firmware build generates.
@@ -61,6 +63,12 @@ $(BUILDDIR)/test_port_tables: test_port_tables.c $(TABLE_ENV) hw_mock.h | $(BUIL
 
 # rtl837x_acl.c and rtl837x_acl_cmd.c are compiled UNMODIFIED from the firmware tree.
 $(BUILDDIR)/test_acl: test_acl.c support.c hw_mock.c env_tables.c $(SRCROOT)/cmd_editor.c $(SRCROOT)/rtl837x_acl.c $(SRCROOT)/rtl837x_acl_cmd.c hw_mock.h | $(BUILDDIR)
+	$(CC) $(CFLAGS) $(filter %.c,$^) -o $@ $(LDFLAGS)
+
+$(BUILDDIR)/test_dot1x: test_dot1x.c $(SRCROOT)/dot1x.c $(SRCROOT)/md5.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+$(BUILDDIR)/test_snmp: test_snmp.c support.c hw_mock.c $(SRCROOT)/snmp.c $(SRCROOT)/cmd_editor.c hw_mock.h | $(BUILDDIR)
 	$(CC) $(CFLAGS) $(filter %.c,$^) -o $@ $(LDFLAGS)
 
 $(BUILDDIR)/test_tick_gate: test_tick_gate.c support.c $(SRCROOT)/cmd_editor.c $(SRCROOT)/timer.c | $(BUILDDIR)

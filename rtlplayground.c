@@ -36,6 +36,8 @@
 #include "boot.h"
 #include "sfp.h"
 #include "rtl837x_acl.h"
+#include "dot1x.h"
+#include "snmp.h"
 
 extern __code const struct machine machine;
 extern __xdata uint32_t flash_size;
@@ -973,7 +975,9 @@ void handle_rx(void)
 		print_byte(uip_buf[3]); print_byte(uip_buf[4]); print_byte(uip_buf[5]); write_char('\n');
 		print_string(" MGMT-VLAN: "); print_short(management_vlan); write_char('\n');
 #endif
-		if ((stp_enabled || lacpEnabled) && uip_buf[0] == 0x01 && uip_buf[1] == 0x80
+		if (dot1x_on && dot1x_rx()) {
+			// EAPOL, or from a port that 802.1X keeps closed
+		} else if ((stp_enabled || lacpEnabled) && uip_buf[0] == 0x01 && uip_buf[1] == 0x80
 			&& uip_buf[2] == 0xc2 && uip_buf[3] == 0x00 && uip_buf[4] == 0x00) {
 			if (stp_enabled && uip_buf[5] == 0x00) {
 				stp_in();
@@ -1181,6 +1185,7 @@ static void handle_tick(void)
 		// Check for button presses once a second
 		handle_button();
 		acl_poll();
+		dot1x_second();
 		link_irq = 1;
 		// Age the ARP cache: uip_arp_timer() expects a 10 s cadence
 		if (++arp_age_secs >= 10) {
@@ -1239,6 +1244,8 @@ void idle(void)
 		check_links();
 		if (lacpEnabled)
 			lacp_link_change(link_changed);
+		if (dot1x_on)
+			dot1x_link_change(link_changed);
 	}
 	health_phase(HEALTH_PH_LINK);
 	if (rx_irq) {
@@ -1720,6 +1727,8 @@ void main(void)
 	trap_init();
 	vlan_setup();
 	port_l2_setup();
+	dot1x_init();
+	snmp_init();
 	igmp_setup();
 	bandwidth_setup();
 	uip_init();

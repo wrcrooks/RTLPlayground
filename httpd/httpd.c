@@ -8,6 +8,8 @@
 #include "uip.h"
 #include "timer.h"
 #include "sessions.h"
+#include "dot1x.h"
+#include "snmp.h"
 #include "html_data.h"
 
 // #define DEBUG
@@ -1055,6 +1057,10 @@ void httpd_appcall(void)
 				send_lag();
 			} else if (is_word(q, "/stp.json")) {
 				send_stp();
+			} else if (is_word(q, "/dot1x.json")) {
+				send_dot1x();
+			} else if (is_word(q, "/snmp.json")) {
+				send_snmp();
 			} else if (is_word(q, "/lldp.json")) {
 				send_lldp();
 			} else if (is_word(q, "/stpcnt.json")) {

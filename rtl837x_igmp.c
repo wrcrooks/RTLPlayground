@@ -18,6 +18,7 @@
 #include "rtl837x_stp.h"
 #include "rtl837x_trap.h"
 #include "machine.h"
+#include "dot1x.h"
 
 extern __code const struct machine machine;
 extern __xdata uint8_t igmpEnabled;
@@ -469,7 +470,7 @@ static void igmp_forward(void)
 	for (i = 0; stp_enabled && i <= MACHINE_MAX_PORT; i++)
 		if (stp_port_state(i) != IGMP_STP_FORWARDING)
 			link &= ~PORT_BIT(i);
-	pmask &= link;
+	pmask &= link & ~dot1x_blocked;
 	if (igmp_rports & ~link) {
 		igmp_rports &= link;
 		igmp_filter();

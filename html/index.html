@@ -628,5 +628,148 @@ button.danger{background:var(--bad);color:#fff;border-color:transparent}
   if($("tab-l2").classList.contains("act"))load().catch(function(){});
 })();
 </script>
+<script>
+/* 802.1X, see doc/dot1x.md */
+(function(){
+  if(!document.getElementById("tab-l2"))return;
+  var tr={
+    en:{x_title:"Port authentication (802.1X)",x_on:"802.1X",x_radius:"RADIUS server",x_secret:"Shared secret",x_unchanged:"unchanged",
+      x_reauth:"Re-authenticate every (s)",x_never:"never",x_mode:"Control",x_mab:"MAB",x_state:"State",x_who:"Device",x_restart:"Restart",
+      x_auto:"auto",x_fauth:"open (no 802.1X)",x_funauth:"blocked",
+      x_note:"On an auto port only 802.1X (EAPOL) passes until the RADIUS server accepts the device; MAB lets in devices without a supplicant by their MAC after about 90 s. Save keeps the settings."},
+    de:{x_title:"Port-Authentifizierung (802.1X)",x_radius:"RADIUS-Server",x_secret:"Gemeinsames Geheimnis",x_unchanged:"unverändert",
+      x_reauth:"Neu authentifizieren alle (s)",x_never:"nie",x_mode:"Steuerung",x_state:"Status",x_who:"Gerät",x_restart:"Neu starten",
+      x_fauth:"offen (kein 802.1X)",x_funauth:"gesperrt",
+      x_note:"An einem Auto-Port läuft nur 802.1X (EAPOL), bis der RADIUS-Server das Gerät annimmt; MAB lässt Geräte ohne Supplicant nach etwa 90 s anhand ihrer MAC zu. Speichern behält die Einstellungen."},
+    es:{x_title:"Autenticación de puertos (802.1X)",x_radius:"Servidor RADIUS",x_secret:"Secreto compartido",x_unchanged:"sin cambios",
+      x_reauth:"Reautenticar cada (s)",x_never:"nunca",x_mode:"Control",x_state:"Estado",x_who:"Dispositivo",x_restart:"Reiniciar",
+      x_fauth:"abierto (sin 802.1X)",x_funauth:"bloqueado",
+      x_note:"En un puerto auto solo pasa 802.1X (EAPOL) hasta que el servidor RADIUS acepta el dispositivo; MAB admite por su MAC, tras unos 90 s, a los dispositivos sin suplicante. Guardar conserva los ajustes."},
+    fr:{x_title:"Authentification des ports (802.1X)",x_radius:"Serveur RADIUS",x_secret:"Secret partagé",x_unchanged:"inchangé",
+      x_reauth:"Réauthentifier toutes les (s)",x_never:"jamais",x_mode:"Contrôle",x_state:"État",x_who:"Appareil",x_restart:"Relancer",
+      x_fauth:"ouvert (sans 802.1X)",x_funauth:"bloqué",
+      x_note:"Sur un port auto, seul 802.1X (EAPOL) passe jusqu'à ce que le serveur RADIUS accepte l'appareil ; MAB admet par leur MAC, après environ 90 s, les appareils sans supplicant. Enregistrer conserve les réglages."},
+    ja:{x_title:"ポート認証 (802.1X)",x_radius:"RADIUS サーバー",x_secret:"共有シークレット",x_unchanged:"変更なし",
+      x_reauth:"再認証の間隔 (秒)",x_never:"しない",x_mode:"制御",x_state:"状態",x_who:"機器",x_restart:"再開",
+      x_fauth:"開放 (802.1X なし)",x_funauth:"遮断",
+      x_note:"auto ポートでは RADIUS サーバーが機器を受け入れるまで 802.1X (EAPOL) だけが通ります。MAB はサプリカントのない機器を約 90 秒後に MAC で受け入れます。保存すると設定が保持されます。"},
+    zh:{x_title:"端口认证 (802.1X)",x_radius:"RADIUS 服务器",x_secret:"共享密钥",x_unchanged:"不变",
+      x_reauth:"重新认证间隔 (秒)",x_never:"从不",x_mode:"控制",x_state:"状态",x_who:"设备",x_restart:"重新开始",
+      x_fauth:"开放 (不认证)",x_funauth:"阻止",
+      x_note:"在 auto 端口上,RADIUS 服务器接受设备之前只放行 802.1X (EAPOL);MAB 约 90 秒后按 MAC 放行没有请求方软件的设备。保存后设置会保留。"}
+  };
+  for(var l in tr)if(LANG[l])for(var k in tr[l])LANG[l][k]=tr[l][k];
+
+  var card=document.createElement("div");card.className="card";
+  card.innerHTML='<h2 data-i18n="x_title"></h2><p class="small mut" data-i18n="x_note"></p>'+
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
+    '<label class="row"><span data-i18n="x_on">802.1X</span> <span class="switch"><input type="checkbox" id="x-on"><i></i></span></label>'+
+    '<label><span data-i18n="x_radius"></span> <input class="in mono" id="x-ip" size="15"> : <input class="in" id="x-port" type="number" min="1" max="65535" style="width:6em"></label>'+
+    '<label><span data-i18n="x_secret"></span> <input class="in" id="x-secret" type="password" size="14"></label>'+
+    '<label><span data-i18n="x_reauth"></span> <input class="in" id="x-reauth" type="number" min="60" max="86400" style="width:7em"></label>'+
+    '<button class="ctl" id="x-apply" data-i18n="c_apply"></button></div>'+
+    '<div class="scrollx"><table class="t" id="x-table"><thead><tr><th data-i18n="c_port"></th><th data-i18n="x_mode"></th><th data-i18n="x_mab"></th>'+
+    '<th data-i18n="x_state"></th><th data-i18n="x_who"></th><th></th></tr></thead><tbody></tbody></table></div>';
+  document.getElementById("tab-l2").appendChild(card);
+  $("x-secret").placeholder=t("x_unchanged");$("x-reauth").placeholder=t("x_never");
+  var timer=null,built=false;
+
+  function load(){
+    return getJSON("/dot1x.json").then(function(s){
+      if(!built){
+        $("x-on").checked=!!s.enabled;
+        $("x-ip").value=s.radius;$("x-port").value=s.radius_port;$("x-reauth").value=s.reauth||"";
+      }
+      var tb=$("x-table").tBodies[0];
+      if(!built){
+        tb.innerHTML="";
+        s.ports.forEach(function(p){
+          var tr=tb.insertRow();tr.dataset.port=p.port;
+          var sel=h("select",{class:"in"});
+          [["force-auth","x_fauth"],["auto","x_auto"],["force-unauth","x_funauth"]].forEach(function(o){
+            sel.appendChild(h("option",{value:o[0],text:t(o[1])}));
+          });
+          sel.value=p.mode;
+          var mab=h("input",{type:"checkbox"});mab.checked=!!p.mab;
+          sel.onchange=function(){postCmd("dot1x port "+p.port+" "+sel.value).then(load).catch(function(){})};
+          mab.onchange=function(){postCmd("dot1x port "+p.port+" mab "+(mab.checked?"on":"off")).catch(function(){})};
+          tr.insertCell().textContent=p.port;
+          tr.insertCell().appendChild(sel);
+          tr.insertCell().appendChild(mab);
+          tr.insertCell();tr.insertCell().className="mono";
+          tr.insertCell().appendChild(h("button",{class:"ctl",text:t("x_restart"),onclick:function(){
+            postCmd("dot1x port "+p.port+" restart",true).then(load).catch(function(){})}}));
+        });
+        built=true;
+      }
+      s.ports.forEach(function(p){
+        var tr=tb.querySelector('tr[data-port="'+p.port+'"]');if(!tr)return;
+        tr.cells[3].innerHTML=p.mode==="force-auth"?badge(t("x_fauth")):
+          badge(p.state+(p.method?" ("+p.method+")":""),p.authorized?"ok":(p.state==="held"||p.state==="blocked"?"bad":""));
+        tr.cells[4].textContent=[p.user,p.mac].filter(Boolean).join("  ");
+      });
+    }).catch(function(){});
+  }
+  $("x-apply").addEventListener("click",function(){
+    var c=[],ip=$("x-ip").value.trim(),port=$("x-port").value.trim(),re=$("x-reauth").value.trim(),sec=$("x-secret").value;
+    if(ip)c.push("dot1x radius "+ip+(port?" "+port:""));
+    if(sec)c.push("dot1x secret "+sec);
+    c.push("dot1x reauth "+(re?re:"off"));
+    c.push("dot1x "+($("x-on").checked?"on":"off"));
+    postCmds(c).then(function(){$("x-secret").value="";built=false;load()}).catch(function(){});
+  });
+  var hk=tabHooks.l2,enter=hk&&hk.enter,leave=hk&&hk.leave;
+  function start(){built=false;load();clearInterval(timer);timer=setInterval(load,3000)}
+  if(hk){
+    hk.enter=function(){if(enter)enter.apply(this,arguments);start()};
+    hk.leave=function(){if(leave)leave.apply(this,arguments);clearInterval(timer)};
+  }
+  i18nApply();
+  if(curTab==="l2")start();
+})();
+</script>
+<script>
+/* SNMP, see doc/snmp.md */
+(function(){
+  var ntp=document.getElementById("sy-ntpcard");
+  if(!ntp)return;
+  var tr={
+    en:{n_title:"SNMP",n_on:"SNMPv2c, read-only",n_comm:"Community",n_loc:"Location",n_con:"Contact"},
+    de:{n_on:"SNMPv2c, nur lesen",n_loc:"Standort",n_con:"Kontakt"},
+    es:{n_on:"SNMPv2c, solo lectura",n_comm:"Comunidad",n_loc:"Ubicación",n_con:"Contacto"},
+    fr:{n_on:"SNMPv2c, lecture seule",n_comm:"Communauté",n_loc:"Emplacement"},
+    ja:{n_on:"SNMPv2c (読み取り専用)",n_comm:"コミュニティ",n_loc:"設置場所",n_con:"連絡先"},
+    zh:{n_on:"SNMPv2c (只读)",n_comm:"团体名",n_loc:"位置",n_con:"联系人"}
+  };
+  for(var l in tr)if(LANG[l])for(var k in tr[l])LANG[l][k]=tr[l][k];
+  var card=document.createElement("div");card.className="card";
+  card.innerHTML='<h2 data-i18n="n_title"></h2>'+
+    '<label class="row" style="justify-content:space-between"><span data-i18n="n_on"></span><span class="switch"><input type="checkbox" id="n-on"><i></i></span></label>'+
+    ["community","location","contact"].map(function(f){
+      return'<label class="row"><span class="lb" data-i18n="n_'+f.slice(0,f==="community"?4:3)+'"></span><input class="in" id="n-'+f+'" maxlength="48"></label>'}).join("")+
+    '<div class="row"><button class="ctl pri" id="n-apply" data-i18n="c_apply"></button></div>';
+  ntp.parentNode.insertBefore(card,ntp.nextSibling);
+  var cur={};
+  function load(){
+    return getJSON("/snmp.json").then(function(s){
+      cur=s;$("n-on").checked=!!s.enabled;
+      ["community","location","contact"].forEach(function(f){$("n-"+f).value=s[f]});
+    }).catch(function(){});
+  }
+  $("n-apply").addEventListener("click",function(){
+    var c=[];
+    ["community","location","contact"].forEach(function(f){
+      var v=$("n-"+f).value.trim().replace(/\s+/g," ");
+      if(v&&v!==cur[f])c.push("snmp "+f+" "+v);
+    });
+    c.push("snmp "+($("n-on").checked?"on":"off"));
+    postCmds(c).then(load).catch(load);
+  });
+  var hk=tabHooks.system,enter=hk&&hk.enter;
+  if(hk)hk.enter=function(){if(enter)enter.apply(this,arguments);load()};
+  i18nApply();
+  if(curTab==="system")load();
+})();
+</script>
 </body>
 </html>

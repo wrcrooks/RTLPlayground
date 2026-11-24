@@ -8,4 +8,6 @@ void udp_callbacks(void)
 	syslog_callback(uip_udp_conn->lport);	// let the application decide if this is for it or not
 	dns_callback(uip_udp_conn->lport);
 	ntp_callback(uip_udp_conn->lport);
+	dot1x_callback(uip_udp_conn->lport);
+	snmp_callback(uip_udp_conn->lport);
 }

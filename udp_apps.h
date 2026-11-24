@@ -5,6 +5,8 @@
 #include "syslog.h"
 #include "dns.h"
 #include "ntp.h"
+#include "dot1x.h"
+#include "snmp.h"
 
 void udp_callbacks(void);
 

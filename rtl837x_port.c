@@ -451,6 +451,10 @@ void port_l2mc_set(uint8_t mac_last, __xdata uint16_t vid, __xdata uint16_t pmas
 }
 
 
+/* What "isolate" configured, and the ports 802.1X has closed */
+static __xdata uint16_t port_iso_mask[9];
+static __xdata uint16_t port_iso_gated;
+
 /*
  * Basic L2 configuration such as time to forget an entry
  */
@@ -468,8 +472,10 @@ void port_l2_setup(void) __banked
 		uint16_t mask = PMASK_CPU | PMASK_6;
 		if (machine_detected.isRTL8373)
 			mask = PMASK_CPU | PMASK_9;
+		port_iso_mask[i] = mask;
 		REG_SET(RTL837X_PORT_ISOLATION_BASE + idx, mask);
 	}
+	port_iso_gated = 0;
 	// Frames from new sources beyond a port's limit are dropped (doc/l2.md)
 	reg_bit_set(RTL837X_L2_LRN_PORT_CONSTRT_ACT, 0);
 
@@ -598,10 +604,25 @@ void port_stats_print(void) __banked
 }
 
 
+/* A gated port (802.1X) reaches the CPU port only, and no other port reaches it */
+static void port_iso_write(uint8_t port)
+{
+	static __xdata uint16_t mask;
+
+	if (port_iso_gated & PORT_BIT(port))
+		mask = PMASK_CPU;
+	else
+		mask = port_iso_mask[port] & ~port_iso_gated;
+	REG_SET(RTL837X_PORT_ISOLATION_BASE + (port << 2), mask);
+}
+
+
 void port_isolate(uint8_t port, __xdata uint16_t pmask) __banked
 {
-	if (port <= MACHINE_MAX_PORT)
-		REG_SET(RTL837X_PORT_ISOLATION_BASE + (port << 2), pmask);
+	if (port > MACHINE_MAX_PORT)
+		return;
+	port_iso_mask[port] = pmask;
+	port_iso_write(port);
 }
 
 
@@ -610,8 +631,15 @@ uint16_t port_isolation_get(uint8_t port) __banked
 	if (port > MACHINE_MAX_PORT)
 		return 0;
 
-	reg_read_m(RTL837X_PORT_ISOLATION_BASE + (port << 2));
-	return ((uint16_t)sfr_data[2]) << 8 | sfr_data[3];
+	return port_iso_mask[port];
+}
+
+
+void port_isolation_gate(uint16_t pmask) __banked
+{
+	port_iso_gated = pmask;
+	for (uint8_t i = MACHINE_MIN_PORT; i <= MACHINE_MAX_PORT; i++)
+		port_iso_write(i);
 }
 
 

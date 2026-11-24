@@ -81,6 +81,7 @@ static uint16_t link_up = 0x3ff;
 uint16_t port_link_mask(void) { return link_up; }
 static uint16_t iso_block;
 uint16_t port_isolation_get(uint8_t port) { (void)port; return (uint16_t)~iso_block; }
+uint16_t dot1x_blocked;
 uint16_t port_lag_members_get(uint8_t lag) { return lag_members[lag]; }
 uint8_t port_lag_of(uint8_t port)
 {

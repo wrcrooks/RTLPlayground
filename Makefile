@@ -216,13 +216,17 @@ SRCS = \
 	cmd_editor.c \
 	cmd_parser.c \
 	dhcp.c \
+	dot1x.c \
+	dot1x_cmd.c \
 	html_data.c \
 	rtlplayground.c \
 	boot.c \
 	sfp.c \
 	dns.c \
 	dns_cli.c \
+	md5.c \
 	sessions.c \
+	snmp.c \
 	ntp.c \
 	ntp_cli.c \
 	syslog.c \

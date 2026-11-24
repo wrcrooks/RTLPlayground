@@ -13,6 +13,8 @@ The following endpoints are supported:
  * /l2.json
  * /lag.json
  * /lldp.json
+ * /dot1x.json
+ * /snmp.json
  * /mirror.json
  * /ports.json
  * /stp.json
