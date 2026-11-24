@@ -542,7 +542,7 @@ err_static:
 			atoi_results_short = L2_LEARN_UNLIMITED;
 		else if (!atoi_short(cmd_words_b[3]) || atoi_results_short >= L2_LEARN_UNLIMITED)
 			goto err;
-		REG_SET(RTL837X_L2_LRN_PORT_CONSTRAINT + (port << 2), atoi_results_short);
+		port_l2_limit(port, atoi_results_short);
 		return;
 	}
 err:

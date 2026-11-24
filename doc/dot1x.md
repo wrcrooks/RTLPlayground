@@ -40,5 +40,9 @@ may send EAP-TLS fragments of 1400 bytes when its certificate is that large.
 Set its fragment size to 1200 or less then (wpa_supplicant:
 `fragment_size=1200`). Up to four RADIUS requests are outstanding at a time.
 
+A closed port also learns no addresses, so a device on it can't take over
+another's; with `mab on` it learns one until the switch has seen a frame.
+`l2 limit` applies once the port opens.
+
 A closed port is kept apart with port isolation; `isolate` shows and sets the
 configured members, which apply again once the port opens.

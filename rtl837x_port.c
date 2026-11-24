@@ -454,6 +454,8 @@ void port_l2mc_set(uint8_t mac_last, __xdata uint16_t vid, __xdata uint16_t pmas
 /* What "isolate" configured, and the ports 802.1X has closed */
 static __xdata uint16_t port_iso_mask[9];
 static __xdata uint16_t port_iso_gated;
+static __xdata uint16_t port_gate_learn;
+static __xdata uint16_t port_lrn_limit[9];
 
 /*
  * Basic L2 configuration such as time to forget an entry
@@ -466,7 +468,8 @@ void port_l2_setup(void) __banked
 	for (uint8_t i = MACHINE_MIN_PORT; i <= MACHINE_MAX_PORT; i++) {
 		// Limit the number of automatically learned MAC-Entries per port to 0x1040
 		uint8_t idx = (i << 2);
-		REG_SET(RTL837X_L2_LRN_PORT_CONSTRAINT + idx, 0x00001040);
+		port_lrn_limit[i] = L2_LEARN_UNLIMITED;
+		REG_SET(RTL837X_L2_LRN_PORT_CONSTRAINT + idx, L2_LEARN_UNLIMITED);
 
 		// All ports may communicate with each other and CPU-Port
 		uint16_t mask = PMASK_CPU | PMASK_6;
@@ -476,6 +479,7 @@ void port_l2_setup(void) __banked
 		REG_SET(RTL837X_PORT_ISOLATION_BASE + idx, mask);
 	}
 	port_iso_gated = 0;
+	port_gate_learn = 0;
 	// Frames from new sources beyond a port's limit are dropped (doc/l2.md)
 	reg_bit_set(RTL837X_L2_LRN_PORT_CONSTRT_ACT, 0);
 
@@ -635,11 +639,34 @@ uint16_t port_isolation_get(uint8_t port) __banked
 }
 
 
-void port_isolation_gate(uint16_t pmask) __banked
+/* A gated port learns nothing, so it can't take over the address of a device on
+ * another port, or a single address for MAC authentication to see */
+static void port_learn_write(uint8_t port)
+{
+	static __xdata uint16_t limit;
+
+	limit = port_lrn_limit[port];
+	if (port_iso_gated & PORT_BIT(port))
+		limit = (port_gate_learn & PORT_BIT(port)) ? 1 : 0;
+	REG_SET(RTL837X_L2_LRN_PORT_CONSTRAINT + (port << 2), limit);
+}
+
+
+void port_l2_limit(uint8_t port, __xdata uint16_t limit) __banked
+{
+	port_lrn_limit[port] = limit;
+	port_learn_write(port);
+}
+
+
+void port_isolation_gate(uint16_t pmask, __xdata uint16_t learn) __banked
 {
 	port_iso_gated = pmask;
-	for (uint8_t i = MACHINE_MIN_PORT; i <= MACHINE_MAX_PORT; i++)
+	port_gate_learn = learn;
+	for (uint8_t i = MACHINE_MIN_PORT; i <= MACHINE_MAX_PORT; i++) {
 		port_iso_write(i);
+		port_learn_write(i);
+	}
 }
 
 

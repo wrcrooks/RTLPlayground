@@ -106,6 +106,7 @@ static __xdata uint8_t rad_conn_ip[4];
 static __xdata uint16_t rad_conn_port;
 static __xdata uip_ipaddr_t rad_ip;
 
+static __xdata uint16_t d_learn;
 static __xdata uint8_t d_port;
 static __xdata struct dot1x_port * __xdata d_p;
 static __xdata uint8_t d_eap[EAP_MAX];		/* an EAP packet to the supplicant */
@@ -148,21 +149,30 @@ static uint8_t d_controlled(void)
 /* Recompute the fenced-off ports; newly closed ones lose their learned addresses */
 static void d_gate(void)
 {
-	static __xdata uint16_t b, was;
+	static __xdata uint16_t b, learn, was, flush;
 	static __xdata uint8_t i;
 
 	b = 0;
-	for (i = MACHINE_MIN_PORT; dot1x_on && i <= MACHINE_MAX_PORT; i++)
-		if (dot1x_cfg.mode[i] == DOT1X_FORCE_UNAUTH
-		    || (dot1x_cfg.mode[i] == DOT1X_AUTO && !dot1x_ports[i].authorized))
+	learn = 0;
+	for (i = MACHINE_MIN_PORT; dot1x_on && i <= MACHINE_MAX_PORT; i++) {
+		if (dot1x_cfg.mode[i] == DOT1X_FORCE_UNAUTH) {
 			b |= PORT_BIT(i);
-	if (b == dot1x_blocked)
+		} else if (dot1x_cfg.mode[i] == DOT1X_AUTO && !dot1x_ports[i].authorized) {
+			b |= PORT_BIT(i);
+			/* the switch drops what it may not learn, and MAB needs one frame */
+			if (dot1x_cfg.mab[i] && !dot1x_ports[i].mac_valid)
+				learn |= PORT_BIT(i);
+		}
+	}
+	if (b == dot1x_blocked && learn == d_learn)
 		return;
 	was = dot1x_blocked;
+	flush = b & (~was | (d_learn & ~learn));
 	dot1x_blocked = b;
-	port_isolation_gate(b);
+	d_learn = learn;
+	port_isolation_gate(b, learn);
 	for (i = MACHINE_MIN_PORT; i <= MACHINE_MAX_PORT; i++)
-		if ((b & ~was) & PORT_BIT(i))
+		if (flush & PORT_BIT(i))
 			port_l2_forget_port(i);
 }
 
@@ -655,6 +665,7 @@ static void note_mac(void)
 {
 	memcpy(d_p->mac, d_src, 6);
 	d_p->mac_valid = 1;
+	d_gate();
 }
 
 
@@ -919,6 +930,7 @@ void dot1x_init(void) __banked
 
 	dot1x_on = 0;
 	dot1x_blocked = 0;
+	d_learn = 0;
 	rad_conn = 0;
 	rad_conn_ip[0] = 0;
 	dot1x_cfg.radius_ip[0] = dot1x_cfg.radius_ip[1] = dot1x_cfg.radius_ip[2] = dot1x_cfg.radius_ip[3] = 0;

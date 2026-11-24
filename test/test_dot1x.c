@@ -33,11 +33,11 @@ struct machine_runtime machine_detected;
 uint16_t management_vlan = 5;
 uint8_t sfr_data[4];
 
-static uint16_t gate_mask = 0xffff, links_up, forgotten;
+static uint16_t gate_mask = 0xffff, learn_mask, links_up, forgotten;
 static uint8_t rma_act = 0xff;
 static unsigned rnd = 1;
 
-void port_isolation_gate(uint16_t m) { gate_mask = m; }
+void port_isolation_gate(uint16_t m, uint16_t l) { gate_mask = m; learn_mask = l; }
 void port_l2_forget_port(uint8_t p) { forgotten |= 1 << p; }
 uint16_t port_link_mask(void) { return links_up; }
 void trap_rma_set(uint16_t reg, uint8_t act) { if (reg == 0x4ed8) rma_act = act; }
@@ -466,7 +466,10 @@ int main(void)
 	link_(6, true);
 	uint8_t dev[6] = { 0x02, 0, 0, 0, 0, 0x03 };
 	seconds(1);
+	check(learn_mask == 1 << 6, "a closed MAB port may learn one address, the others none: %x", learn_mask);
+	forgotten = 0;
 	check(dot1x_seen(6, dev) == 1, "what a closed port sends is dropped");
+	check(!learn_mask && forgotten == 1 << 6, "with the address known it learns no more");
 	seconds(DOT1X_TX_PERIOD * DOT1X_MAB_AFTER);
 	check(srv_mab_ok == 0 && st(6) == DOT1X_S_CONNECTING, "no MAB before %d unanswered requests", DOT1X_MAB_AFTER);
 	seconds(2);
