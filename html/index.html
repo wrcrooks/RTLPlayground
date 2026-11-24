@@ -612,6 +612,8 @@ button.danger{background:var(--bad);color:#fff;border-color:transparent}
   var hk=tabHooks.l2,enter=hk&&hk.enter;
   if(hk)hk.enter=function(){if(enter)enter.apply(this,arguments);load().catch(function(){})};
   i18nApply();
+  /* Opened on this tab: app.js entered it before the hook above */
+  if($("tab-l2").classList.contains("act"))load().catch(function(){});
 })();
 </script>
 </body>
